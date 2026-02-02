@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Copy of Mon Potager Autosuffisant",
+  "description": "Une application interactive pour planifier et gérer un potager nourricier pour 1 à 4 personnes, incluant une vue satellite, des calendriers de culture et des conseils d'entretien.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
