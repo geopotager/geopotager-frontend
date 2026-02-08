@@ -1,125 +1,84 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { VarietySuggestion, RotationSuggestion } from '../types';
+import { CLIMATES, VARIETIES_DB, ROTATION_RULES, GARDEN_TIPS } from '../mockData';
+import { CULTURES } from '../constants';
 
-// --- Mock Data pour le fallback en cas d'erreur de quota (429) ---
-const MOCK_VARIETIES = [
-  { name: "Variété Rustique Locale", description: "Variété ancienne adaptée à la plupart des climats, résistante aux maladies courantes." },
-  { name: "Variété Précoce", description: "Idéale pour les récoltes rapides avant les gelées ou les fortes chaleurs." },
-  { name: "Variété de Conservation", description: "Peau épaisse, idéale pour le stockage hivernal." }
-];
+// --- SYSTEME EXPERT LOCAL (Sans appel API) ---
 
-const MOCK_ROTATIONS = [
-  { cultureName: "Haricots ou Pois", reason: "Fixe l'azote dans le sol pour régénérer la terre après une culture gourmande.", timing: "Printemps suivant" },
-  { cultureName: "Laitues d'hiver", reason: "Couverture du sol légère, n'épuise pas les réserves.", timing: "Automne" },
-  { cultureName: "Engrais Vert (Moutarde)", reason: "Structure le sol et évite le lessivage des nutriments.", timing: "Fin d'été" }
-];
-
-export const getVarietiesForLocation = async (cultureName: string, location: string) => {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const prompt = `Agis comme un expert maraîcher. Je suis situé à : ${location}.
-    Pour la culture : "${cultureName}", suggère-moi 5 variétés spécifiquement adaptées à mon climat local (rusticité, résistance, précocité).`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              name: { type: Type.STRING, description: "Nom de la variété" },
-              description: { type: Type.STRING, description: "Court descriptif technique" },
-            },
-            required: ["name", "description"],
-          },
-        },
-      },
-    });
-
-    const text = response.text || "[]";
-    const cleanText = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleanText);
-  } catch (e) {
-    console.warn("API Quota exceeded or Error in getVarietiesForLocation, using mock data.", e);
-    // Fallback pour ne pas bloquer l'UI
-    return MOCK_VARIETIES.map(v => ({...v, name: `${v.name} (${cultureName})`}));
+// Détermine le climat approximatif basé sur une string (très basique pour l'exemple)
+export const getClimate = (location: string): 'oceanic' | 'mediterranean' | 'continental' | 'mountain' => {
+  if(!location) return 'oceanic';
+  for (const [key, value] of Object.entries(CLIMATES)) {
+    if (location.toLowerCase().includes(key.toLowerCase())) return value as any;
   }
+  return 'oceanic'; // Défaut
 };
 
-export const getNextRotationSuggestions = async (currentCultureName: string, location: string) => {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const prompt = `Je suis à ${location}. Je cultive actuellement "${currentCultureName}".
-    Quelles sont les 3 meilleures cultures à planter APRÈS celle-ci (saison suivante) en respectant la rotation des cultures et le climat ?`;
+export const getVarietiesForLocation = async (cultureName: string, location: string): Promise<VarietySuggestion[]> => {
+  // Simulation de délai asynchrone (optionnel, pour l'UX fluide)
+  await new Promise(resolve => setTimeout(resolve, 50));
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              cultureName: { type: Type.STRING, description: "Nom générique" },
-              reason: { type: Type.STRING, description: "Pourquoi c'est bon pour le sol" },
-              timing: { type: Type.STRING, description: "Quand planter (mois)" },
-            },
-            required: ["cultureName", "reason", "timing"],
-          },
-        },
-      },
-    });
-
-    const text = response.text || "[]";
-    const cleanText = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleanText);
-  } catch (e) {
-    console.warn("API Quota exceeded or Error in getNextRotationSuggestions, using mock data.", e);
-    return MOCK_ROTATIONS;
+  const climate = getClimate(location);
+  
+  // Recherche dans la DB
+  // Mapping intelligent des noms (ex: 'Tomates' -> 'Tomates')
+  let dbKey = Object.keys(VARIETIES_DB).find(k => k.toLowerCase() === cultureName.toLowerCase());
+  
+  // Fallback si non trouvé direct, essayer par catégorie générique
+  if (!dbKey) {
+      if(cultureName.toLowerCase().includes('laitue') || cultureName.toLowerCase().includes('salade')) dbKey = 'Salades';
+      else if(cultureName.toLowerCase().includes('courge')) dbKey = 'Courges';
+      else if(cultureName.toLowerCase().includes('haricot')) dbKey = 'Haricots';
   }
+
+  if (dbKey) {
+      const varietiesByCulture = VARIETIES_DB[dbKey];
+      // Essayer le climat spécifique, sinon 'all', sinon le premier dispo
+      const varieties = varietiesByCulture[climate] || varietiesByCulture['all'] || Object.values(varietiesByCulture)[0];
+      if (varieties && varieties.length > 0) return varieties;
+  }
+
+  // Fallback ultime générique
+  return [
+    { name: "Variété Locale", description: "Privilégiez les semences paysannes de votre région." },
+    { name: "Variété Rustique", description: "Plus résistante aux maladies." }
+  ];
 };
 
-export const getGardenAnalysis = async (gardenData: any) => {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: `Analyse la configuration de mon potager : ${JSON.stringify(gardenData)}. 
-      Considère l'objectif d'autosuffisance. Donne-moi 3 conseils stratégiques pour optimiser le rendement.`,
-    });
-    return response.text;
-  } catch (e) {
-    console.warn("API Error in getGardenAnalysis", e);
-    return "L'analyse IA est momentanément indisponible (Quota atteint). Concentrez-vous sur la densité de plantation et la rotation des cultures pour optimiser votre rendement.";
-  }
+export const getNextRotationSuggestions = async (currentCultureName: string, location: string): Promise<RotationSuggestion[]> => {
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  // Trouver la catégorie de la culture actuelle
+  const culture = CULTURES.find(c => c.name === currentCultureName);
+  const category = culture ? culture.category : 'Feuilles'; // Fallback
+
+  const suggestions = ROTATION_RULES[category] || ROTATION_RULES['Feuilles'];
+  
+  return suggestions;
 };
 
+export const getGardenAnalysis = async (gardenData: any): Promise<string> => {
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const plotCount = gardenData.plots ? gardenData.plots.length : 0;
+  // Aléatoire déterministe basé sur la longueur pour varier un peu sans random pur
+  const tipIndex = plotCount % GARDEN_TIPS.length;
+  const tip = GARDEN_TIPS[tipIndex];
+
+  let analysis = "";
+  if (plotCount === 0) {
+      analysis = "Commencez par ajouter des parcelles (potager, serre, poulailler) via le menu.";
+  } else if (plotCount < 3) {
+    analysis = "Bon début ! Vous avez encore de l'espace pour diversifier vos cultures.";
+  } else {
+    analysis = "Votre plan est bien rempli. Pensez maintenant aux rotations.";
+  }
+
+  return `${analysis} Conseil : ${tip}`;
+};
+
+// Le géocodage reste simulé localement
 export const geocodeAddress = async (address: string) => {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Donne-moi les coordonnées précises (latitude et longitude) pour l'adresse suivante : "${address}". Réponds UNIQUEMENT au format JSON : {"lat": number, "lng": number}`,
-      config: {
-        tools: [{ googleMaps: {} }],
-      },
-    });
-    
-    const text = response.text || "{}";
-    const match = text.match(/\{.*\}/s);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
-  } catch (e) {
-    console.error("Geocoding parsing error or Quota limit", e);
-    // Pas de mock facile pour le géocodage sans API map, on retourne null
-  }
-  return null;
+  // Mock simple : France par défaut
+  return { lat: 46.603354, lng: 1.888334 }; 
 };

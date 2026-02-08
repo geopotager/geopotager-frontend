@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import GardenMap from './components/GardenMap';
 import CultureDetails from './components/CultureDetails';
@@ -10,52 +10,149 @@ import PlotEditor from './components/PlotEditor';
 import { Culture, Plot, GardenConfig, PlotSuggestion } from './types';
 import { CULTURES, INITIAL_PLOTS } from './constants';
 import { getGardenAnalysis } from './lib/gemini';
+import { generateMissingSuggestions, countExistingPlants, calculateNeeds } from '../lib/plantCalculations';
 
 const App: React.FC = () => {
+  const [showIntro, setShowIntro] = useState(true);
   const [selectedCulture, setSelectedCulture] = useState<Culture | null>(null);
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
+  const [multiSelectedIds, setMultiSelectedIds] = useState<string[]>([]); 
   const [currentTab, setCurrentTab] = useState<'garden' | 'calendar' | 'sufficiency'>('garden');
   const [isPrintPreview, setIsPrintPreview] = useState(false);
+  const [showSunPath, setShowSunPath] = useState(false);
+  const [isCalibrating, setIsCalibrating] = useState(false); 
+  
+  // Navigation Serre
+  const [currentGreenhouseId, setCurrentGreenhouseId] = useState<string | null>(null);
 
-  // Config avec valeurs par défaut pour l'image de fond
-  const [config, setConfig] = useState<GardenConfig>({ 
-    peopleCount: 2,
-    sufficiencyTarget: 50,
-    terrainWidth: 15,
-    terrainHeight: 10,
-    address: 'Sarthe, France',
-    lat: 48.0061,
-    lng: 0.1996,
-    backgroundScale: 1,
-    backgroundX: 0,
-    backgroundY: 0,
-    backgroundOpacity: 0.5
+  // État spécifique pour forcer l'affichage du panneau suggestions si le calcul est lancé
+  const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
+
+  const [config, setConfig] = useState<GardenConfig>(() => {
+    const saved = localStorage.getItem('potager_config');
+    return saved ? JSON.parse(saved) : { 
+      peopleCount: 2,
+      sufficiencyTarget: 50,
+      terrainWidth: 15,
+      terrainHeight: 10,
+      address: 'Sarthe, France',
+      lat: 48.0061,
+      lng: 0.1996,
+      backgroundScale: 1,
+      backgroundX: 0,
+      backgroundY: 0,
+      backgroundOpacity: 0.5
+    };
   });
 
-  const [plots, setPlots] = useState<Plot[]>(INITIAL_PLOTS);
-  const [suggestions, setSuggestions] = useState<PlotSuggestion[]>([]); // État pour la liste des suggestions
+  const [plots, setPlots] = useState<Plot[]>(() => {
+    const saved = localStorage.getItem('potager_plots');
+    return saved ? JSON.parse(saved) : INITIAL_PLOTS;
+  });
+
+  const [suggestions, setSuggestions] = useState<PlotSuggestion[]>([]);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowIntro(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('potager_config', JSON.stringify(config));
+  }, [config]);
+
+  useEffect(() => {
+    localStorage.setItem('potager_plots', JSON.stringify(plots));
+  }, [plots]);
+
+  // Logique pour déterminer les plots à afficher (Jardin ou Intérieur Serre)
+  const displayedPlots = useMemo(() => {
+    if (currentGreenhouseId) {
+        const gh = plots.find(p => p.id === currentGreenhouseId);
+        return gh && gh.subPlots ? gh.subPlots : [];
+    }
+    return plots;
+  }, [plots, currentGreenhouseId]);
+
+  const updateDisplayedPlots = (newPlots: Plot[]) => {
+    if (currentGreenhouseId) {
+        setPlots(plots.map(p => p.id === currentGreenhouseId ? { ...p, subPlots: newPlots } : p));
+    } else {
+        setPlots(newPlots);
+    }
+  };
+
+  const sufficiencyScore = useMemo(() => {
+    const totalPlantsNeeded = CULTURES.reduce((acc, c) => 
+      acc + calculateNeeds(c.id, config.peopleCount, config.sufficiencyTarget).neededPlants, 0
+    );
+
+    if (totalPlantsNeeded === 0) return 0;
+
+    let totalPlantsOnPlan = 0;
+    CULTURES.forEach(c => {
+        totalPlantsOnPlan += countExistingPlants(plots, c.id);
+    });
+
+    return Math.min(100, Math.round((totalPlantsOnPlan / totalPlantsNeeded) * 100));
+  }, [plots, config.peopleCount, config.sufficiencyTarget]);
+
 
   const handleSelectCulture = (culture: Culture) => {
     setSelectedCulture(culture);
     setSelectedPlot(null); 
+    setMultiSelectedIds([]);
     setCurrentTab('garden');
   };
 
   const handleSelectPlot = (plot: Plot) => {
     setSelectedPlot(plot);
     setSelectedCulture(null);
+    setMultiSelectedIds([]);
     setCurrentTab('garden');
   };
 
+  const handleMultiSelect = (ids: string[]) => {
+    setMultiSelectedIds(ids);
+    if(ids.length === 1) {
+       const p = displayedPlots.find(plot => plot.id === ids[0]);
+       if(p) setSelectedPlot(p);
+    } else {
+       setSelectedPlot(null);
+       setSelectedCulture(null);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if(multiSelectedIds.length === 0) return;
+    updateDisplayedPlots(displayedPlots.filter(p => !multiSelectedIds.includes(p.id)));
+    setMultiSelectedIds([]);
+    setSelectedPlot(null);
+  };
+
+  const handleIndividualDelete = (id: string) => {
+    updateDisplayedPlots(displayedPlots.filter(p => p.id !== id));
+    if (multiSelectedIds.includes(id)) {
+        const newSelection = multiSelectedIds.filter(mid => mid !== id);
+        setMultiSelectedIds(newSelection);
+        if(newSelection.length === 0) setSelectedPlot(null);
+    }
+  };
+
   const handleUpdatePlot = (updatedPlot: Plot) => {
-    setPlots(plots.map(p => p.id === updatedPlot.id ? updatedPlot : p));
+    updateDisplayedPlots(displayedPlots.map(p => p.id === updatedPlot.id ? updatedPlot : p));
     setSelectedPlot(updatedPlot);
   };
 
-  const handleAddPlot = (newPlot: Plot) => {
-    setPlots([...plots, newPlot]);
+  const handleAddPlot = (customPlot?: Plot) => {
+    const newPlot: Plot = customPlot || {
+      id: Math.random().toString(36).substr(2, 9),
+      name: `Nouvel Élément`, type: 'culture', shape: 'rect',
+      x: 1, y: 1, width: 2, height: 1.2, rotation: 0, opacity: 0.8, exposure: 'Soleil'
+    };
+    updateDisplayedPlots([...displayedPlots, newPlot]);
   };
 
   const handleAddCultureFromDetails = (cultureId: string, variety?: string) => {
@@ -65,319 +162,404 @@ const App: React.FC = () => {
       name: culture ? culture.name : 'Nouvelle Culture',
       type: 'culture',
       shape: 'rect',
-      x: config.terrainWidth / 2 - 1,
-      y: config.terrainHeight / 2 - 0.5,
+      x: 1, y: 1,
       width: 2,
       height: 1,
       exposure: 'Soleil',
       plantedCultureId: cultureId,
-      selectedVariety: variety
+      selectedVariety: variety,
+      opacity: 0.8
     };
-    setPlots([...plots, newPlot]);
+    updateDisplayedPlots([...displayedPlots, newPlot]);
     setSelectedCulture(null);
     setSelectedPlot(newPlot);
   };
 
   const handleDeletePlot = (id: string) => {
-    setPlots(plots.filter(p => p.id !== id));
+    updateDisplayedPlots(displayedPlots.filter(p => p.id !== id));
     setSelectedPlot(null);
   };
 
-  // Ajout d'une suggestion au plan
   const handleAddSuggestionToPlan = (suggestion: PlotSuggestion) => {
     const culture = CULTURES.find(c => c.id === suggestion.cultureId);
     if (!culture) return;
 
-    // Position par défaut au centre, l'utilisateur déplacera
     const newPlot: Plot = {
        id: Math.random().toString(36).substr(2, 9),
        name: `${culture.name}`,
        type: 'culture',
        shape: 'rect',
-       x: config.terrainWidth / 2 - (suggestion.suggestedWidth / 2),
-       y: config.terrainHeight / 2 - (suggestion.suggestedHeight / 2),
+       x: 1, y: 1,
        width: suggestion.suggestedWidth,
        height: suggestion.suggestedHeight,
        exposure: 'Soleil',
-       plantedCultureId: suggestion.cultureId
+       plantedCultureId: suggestion.cultureId,
+       opacity: 0.8
     };
 
-    setPlots([...plots, newPlot]);
-    // On retire la suggestion de la liste une fois ajoutée
+    updateDisplayedPlots([...displayedPlots, newPlot]);
     setSuggestions(suggestions.filter(s => s.cultureId !== suggestion.cultureId));
-    setSelectedPlot(newPlot); // Focus direct pour ajustement
+    setSelectedPlot(newPlot);
   };
 
-  // Calcul des suggestions au lieu de placement direct
+  const toggleSuggestionSelection = (cultureId: string) => {
+     setSuggestions(suggestions.map(s => 
+       s.cultureId === cultureId ? { ...s, selected: !s.selected } : s
+     ));
+  };
+
+  const handleAutoPlaceSuggestions = () => {
+    const newPlots = [...displayedPlots];
+    suggestions.filter(s => s.selected).forEach(s => {
+        const culture = CULTURES.find(c => c.id === s.cultureId);
+        newPlots.push({
+            id: Math.random().toString(36).substr(2, 9),
+            name: culture?.name || 'Auto',
+            type: 'culture',
+            shape: 'rect',
+            x: 1, y: 1, 
+            width: s.suggestedWidth, height: s.suggestedHeight,
+            exposure: 'Soleil',
+            plantedCultureId: s.cultureId
+        });
+    });
+    updateDisplayedPlots(newPlots);
+    setSuggestions([]);
+    setShowSuggestionsPanel(false);
+  };
+
   const handleAutoGeneratePlan = async () => {
     setIsAnalyzing(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
+    setSuggestions([]); 
+    setShowSuggestionsPanel(true); // Force open panel immediately
 
-    const newSuggestions: PlotSuggestion[] = [];
-
-    CULTURES.forEach(culture => {
-      // 1. Calculer besoin total
-      const neededPlants = Math.ceil(culture.plantsPerPerson * config.peopleCount * (config.sufficiencyTarget / 100));
-      
-      // 2. Calculer existant
-      let currentPlants = 0;
-      plots.filter(p => p.plantedCultureId === culture.id).forEach(p => {
-         const rows = Math.floor((p.height * 100) / culture.spacingCm.betweenRows);
-         const perRow = Math.floor((p.width * 100) / culture.spacingCm.betweenPlants);
-         currentPlants += rows * perRow;
-      });
-
-      // 3. Calculer manquant
-      let missingPlants = neededPlants - currentPlants;
-      
-      if (missingPlants > 0) {
-        // Surface estimée
-        const areaPerPlantM2 = (culture.spacingCm.betweenRows * culture.spacingCm.betweenPlants) / 10000;
-        const requiredArea = missingPlants * areaPerPlantM2;
-        
-        // Bloc standard pour l'UX
-        const blockWidth = 1.2; 
-        const blockHeight = Math.max(1, Math.ceil((requiredArea / blockWidth) * 10) / 10);
-        
-        newSuggestions.push({
-          cultureId: culture.id,
-          missingPlants: missingPlants,
-          suggestedWidth: blockWidth,
-          suggestedHeight: blockHeight,
-          reason: `Il manque ${missingPlants} plants pour atteindre ${config.sufficiencyTarget}% d'autonomie.`
-        });
-      }
-    });
-
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    const newSuggestions = generateMissingSuggestions(plots, config.peopleCount, config.sufficiencyTarget);
+    
     setSuggestions(newSuggestions);
     setIsAnalyzing(false);
-    
-    if (newSuggestions.length > 0) {
-      setAiAnalysis("J'ai calculé les parcelles nécessaires pour combler vos déficits. Veuillez les ajouter via la liste sous le plan.");
-      setTimeout(() => setAiAnalysis(null), 8000);
-    } else {
-      setAiAnalysis("Félicitations ! Votre plan couvre déjà vos besoins définis.");
-      setTimeout(() => setAiAnalysis(null), 5000);
-    }
+    setAiAnalysis(newSuggestions.length > 0 ? `${newSuggestions.length} cultures manquantes.` : "Objectif atteint !");
   };
 
-  // --- Print View Logic ---
+  const handleRequestPlanningFromVivier = async () => {
+      setCurrentTab('garden');
+      await handleAutoGeneratePlan();
+  };
+
+  const handleOpenCultureDetails = (cultureId: string) => {
+      const culture = CULTURES.find(c => c.id === cultureId);
+      if (culture) {
+          setSelectedCulture(culture);
+          setSelectedPlot(null);
+          // Si on est dans l'onglet vivier, on peut soit rester, soit basculer. 
+          // Ici on reste dans l'onglet actuel mais on ouvre le panneau latéral qui est 'global'
+      }
+  };
+
   if (isPrintPreview) {
     return (
       <div className="min-h-screen bg-white p-8 overflow-auto">
         <div className="max-w-4xl mx-auto space-y-8 print:w-full print:max-w-none">
-          <div className="flex justify-between items-start border-b border-stone-200 pb-4 print:hidden">
-             <h1 className="text-2xl font-black">Aperçu Impression</h1>
+          <div className="flex justify-between items-start border-b-2 border-stone-900 pb-4 print:hidden">
+             <h1 className="text-2xl font-black font-mono">Aperçu Impression</h1>
              <div className="flex gap-4">
-               <button onClick={() => window.print()} className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold">Lancer Impression</button>
-               <button onClick={() => setIsPrintPreview(false)} className="bg-stone-200 text-stone-700 px-6 py-2 rounded-lg font-bold">Retour</button>
+               <button onClick={() => window.print()} className="bg-emerald-500 border-2 border-stone-900 text-stone-900 px-6 py-2 font-black shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Lancer Impression</button>
+               <button onClick={() => setIsPrintPreview(false)} className="bg-white border-2 border-stone-900 text-stone-900 px-6 py-2 font-black shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Retour</button>
              </div>
           </div>
-          
-          <div className="space-y-2">
-             <h2 className="text-3xl font-black text-emerald-800 uppercase tracking-tighter">Mon Géopotager</h2>
-             <p className="text-sm text-stone-500">Généré le {new Date().toLocaleDateString()}</p>
-          </div>
-
-          <section className="border-4 border-stone-100 rounded-3xl p-4 break-inside-avoid">
-             <h3 className="text-lg font-black uppercase mb-4 text-stone-400">1. Vue du Plan</h3>
-             <div className="h-[500px] w-full relative border border-stone-200 rounded-xl overflow-hidden print:h-[600px]">
-                 <GardenMap 
-                    plots={plots} 
-                    onSelectPlot={() => {}} 
-                    onUpdatePlot={() => {}} 
-                    onAddPlot={() => {}} 
-                    onConfigChange={() => {}} 
-                    selectedPlotId={null} 
-                    config={config} 
-                 />
-             </div>
-          </section>
-
-          <section className="break-inside-avoid">
-             <h3 className="text-lg font-black uppercase mb-4 text-stone-400">2. Liste des Parcelles & Arrosage</h3>
-             <table className="w-full text-sm text-left border border-stone-200 rounded-lg overflow-hidden">
-               <thead className="bg-stone-50 uppercase text-[10px] text-stone-500">
-                 <tr>
-                   <th className="p-3">Nom</th>
-                   <th className="p-3">Culture / Type</th>
-                   <th className="p-3">Dimensions</th>
-                   <th className="p-3">Capacité</th>
-                   <th className="p-3">Arrosage (Total)</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-stone-100">
-                 {plots.map(p => {
-                    const cult = CULTURES.find(c => c.id === p.plantedCultureId);
-                    const plants = cult ? Math.floor(((p.width * 100) / cult.spacingCm.betweenPlants) * ((p.height * 100) / cult.spacingCm.betweenRows)) : 0;
-                    
-                    return (
-                      <tr key={p.id}>
-                        <td className="p-3 font-bold">{p.name}</td>
-                        <td className="p-3">{cult?.name || p.type}</td>
-                        <td className="p-3">{p.width}m x {p.height}m</td>
-                        <td className="p-3 font-bold text-emerald-600">{plants > 0 ? `${plants} plants` : '-'}</td>
-                        <td className="p-3 text-blue-600 font-medium">
-                           {cult ? (
-                             <>
-                               {cult.watering.frequency} <span className="text-stone-400 mx-1">|</span> {Math.round(plants * cult.watering.volumePerPlant)} L
-                             </>
-                           ) : '-'}
-                        </td>
-                      </tr>
-                    );
-                 })}
-               </tbody>
-             </table>
-          </section>
-
-          <section className="break-inside-avoid">
-             <h3 className="text-lg font-black uppercase mb-4 text-stone-400">3. Planning Récapitulatif</h3>
-             <GlobalCalendar />
-          </section>
+          <GardenMap 
+            plots={plots} 
+            onSelectPlot={() => {}} 
+            onUpdatePlot={() => {}} 
+            onAddPlot={() => {}} 
+            onConfigChange={() => {}} 
+            selectedPlotId={null} 
+            multiSelectedIds={[]}
+            onMultiSelect={() => {}}
+            config={config} 
+            isCalibrating={false}
+            showSunPath={false}
+          />
         </div>
       </div>
     );
   }
 
+  const isMultiSelectionMode = multiSelectedIds.length > 0;
+  const hasSuggestions = suggestions.length > 0;
+  // Le panneau s'affiche si : des suggestions existent, OU on est en mode sélection, OU le panneau est forcé (ex: chargement calcul)
+  const showBottomPanel = hasSuggestions || isMultiSelectionMode || showSuggestionsPanel;
+
   return (
-    <div className="flex h-screen bg-stone-100 overflow-hidden font-sans selection:bg-emerald-100 selection:text-emerald-900 w-full">
-      <Sidebar 
-        selectedCulture={selectedCulture} 
-        onSelectCulture={handleSelectCulture}
-        onOpenSettings={() => { setCurrentTab('garden'); setSelectedPlot(null); }}
-        onOpenCalendar={() => setCurrentTab('calendar')}
-        onOpenSufficiency={() => setCurrentTab('sufficiency')}
-        currentTab={currentTab}
-        config={config}
-      />
+    <>
+      {showIntro ? (
+        <div className="fixed inset-0 bg-[#8B4513] z-[100] overflow-hidden flex items-center justify-center">
+           <div className="w-full h-full bg-[#5D4037] absolute top-0 left-0 intro-container flex items-center justify-center">
+              <div className="absolute inset-0 opacity-30" style={{
+                 background: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0,0,0,0.4) 40px, rgba(0,0,0,0.4) 80px)',
+                 animation: 'furrowScroll 2s linear infinite'
+              }}></div>
+              <div className="text-center relative z-10 transform -rotate-x-12">
+                 <h1 className="text-6xl md:text-9xl font-black text-white tracking-tighter drop-shadow-[10px_10px_0px_rgba(0,0,0,0.5)]">GÉOPOTAGER</h1>
+                 <p className="text-xl md:text-2xl font-mono text-orange-400 font-bold mt-4 tracking-[0.5em] bg-stone-900 inline-block px-4 py-1">CHARGEMENT DU TERRAIN...</p>
+              </div>
+           </div>
+        </div>
+      ) : (
+        <div className="flex h-screen bg-[#fcfbf7] overflow-hidden font-sans selection:bg-yellow-300 selection:text-stone-900 w-full animate-in fade-in duration-1000">
+          <Sidebar 
+            selectedCulture={selectedCulture} 
+            onSelectCulture={handleSelectCulture}
+            onOpenSettings={() => { setCurrentTab('garden'); setSelectedPlot(null); }}
+            onOpenCalendar={() => setCurrentTab('calendar')}
+            onOpenSufficiency={() => setCurrentTab('sufficiency')}
+            currentTab={currentTab}
+            config={config}
+          />
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <SetupPanel config={config} onConfigChange={setConfig} />
+          <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+            <SetupPanel 
+              config={config} 
+              onConfigChange={setConfig} 
+              onAutoGenerate={handleAutoGeneratePlan}
+              isAnalyzing={isAnalyzing}
+              isCalibrating={isCalibrating}
+              onToggleCalibration={() => setIsCalibrating(!isCalibrating)}
+              showSunPath={showSunPath}
+              onToggleSunPath={() => setShowSunPath(!showSunPath)}
+              onAddPlot={() => handleAddPlot()}
+              sufficiencyScore={sufficiencyScore}
+            />
 
-        <main className="flex-1 relative w-full overflow-hidden flex flex-col">
-          {currentTab === 'garden' && (
-            <div className="flex-1 flex relative overflow-hidden">
-              <div className={`flex-1 p-6 flex flex-col gap-6 h-full relative z-0 overflow-hidden transition-all duration-500 ease-in-out ${selectedCulture || selectedPlot ? 'mr-[450px]' : 'mr-0'}`}>
-                <div className="flex-1 relative h-full flex flex-col gap-4">
-                  {/* Carte occupe l'espace flexible */}
-                  <div className="flex-1 relative min-h-0">
-                     <GardenMap 
-                      plots={plots} 
-                      onSelectPlot={handleSelectPlot} 
-                      onUpdatePlot={handleUpdatePlot}
-                      onAddPlot={handleAddPlot}
-                      onConfigChange={setConfig}
-                      selectedPlotId={selectedPlot?.id || null} 
-                      config={config}
-                      onPrint={() => setIsPrintPreview(true)}
-                      onMissClick={() => { setSelectedPlot(null); setSelectedCulture(null); }}
-                    />
-                    
-                    <button 
-                      onClick={handleAutoGeneratePlan}
-                      className="absolute top-4 left-4 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-xl shadow-emerald-200 border border-emerald-500 flex items-center gap-3 hover:bg-emerald-700 hover:scale-105 transition-all font-black text-xs z-20"
-                    >
-                      <i className={`fa-solid ${isAnalyzing ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
-                      {isAnalyzing ? 'CALCUL...' : 'CALCULER PARCELLES MANQUANTES'}
-                    </button>
+            <main className="flex-1 relative w-full overflow-hidden flex flex-col">
+              {currentTab === 'garden' && (
+                <div className="flex-1 flex relative overflow-hidden">
+                  
+                  <div className="flex-1 p-6 flex flex-col gap-6 h-full relative z-0 overflow-hidden">
+                    <div className="flex-1 relative h-full flex flex-col gap-4">
 
-                    {aiAnalysis && (
-                      <div className="absolute top-20 left-4 bg-emerald-800 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-4 max-w-md">
-                        <div className="flex items-center gap-3">
-                          <i className="fa-solid fa-check-circle text-emerald-400 text-xl"></i>
-                          <p className="text-sm font-medium">{aiAnalysis}</p>
-                        </div>
+                      <div className="flex-1 relative min-h-0 border-4 border-stone-900 shadow-[8px_8px_0px_0px_rgba(28,25,23,1)]">
+                        {currentGreenhouseId && (
+                            <div className="absolute top-0 left-0 right-0 bg-cyan-600 text-white z-50 p-2 flex justify-between items-center shadow-md">
+                                <span className="font-black uppercase text-sm ml-4"><i className="fa-solid fa-house-chimney-window"></i> Intérieur Serre</span>
+                                <button 
+                                    onClick={() => { setCurrentGreenhouseId(null); setSelectedPlot(null); }}
+                                    className="bg-white text-stone-900 px-4 py-1 text-xs font-black uppercase border-2 border-stone-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
+                                >
+                                    Sortir
+                                </button>
+                            </div>
+                        )}
+
+                        <GardenMap 
+                          plots={displayedPlots} 
+                          onSelectPlot={handleSelectPlot} 
+                          onUpdatePlot={handleUpdatePlot}
+                          onAddPlot={handleAddPlot}
+                          onConfigChange={setConfig}
+                          selectedPlotId={selectedPlot?.id || null} 
+                          multiSelectedIds={multiSelectedIds}
+                          onMultiSelect={handleMultiSelect}
+                          config={config}
+                          onPrint={() => setIsPrintPreview(true)}
+                          onMissClick={() => { setSelectedPlot(null); setSelectedCulture(null); setMultiSelectedIds([]); }}
+                          isCalibrating={isCalibrating}
+                          showSunPath={showSunPath}
+                          onCloseCalibration={() => setIsCalibrating(false)}
+                          onEnterGreenhouse={(id) => { setCurrentGreenhouseId(id); setSelectedPlot(null); }}
+                          isInsideGreenhouse={!!currentGreenhouseId}
+                        />
+                        
+                        {!currentGreenhouseId && (
+                            <button 
+                            onClick={handleAutoGeneratePlan}
+                            className="absolute top-4 left-4 bg-white text-stone-900 px-4 py-2.5 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] border-2 border-stone-900 flex items-center gap-3 hover:bg-yellow-50 transition-all font-black text-[10px] z-20 uppercase hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                            >
+                            <i className={`fa-solid ${isAnalyzing ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
+                            {isAnalyzing ? 'CALCUL...' : 'PLANIFIER'}
+                            </button>
+                        )}
+
+                        {aiAnalysis && (
+                          <div className="absolute top-20 left-4 bg-emerald-500 border-2 border-stone-900 text-stone-900 px-6 py-4 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] z-50 animate-in fade-in slide-in-from-top-4 max-w-md">
+                            <div className="flex items-center gap-3">
+                              <i className="fa-solid fa-check-circle text-stone-900 text-xl"></i>
+                              <p className="text-sm font-black">{aiAnalysis}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+
+                      {/* --- PANEL DU BAS (Sélection ou Suggestions) --- */}
+                      {showBottomPanel && (
+                        <div className="h-48 shrink-0 bg-[#fffdf5] border-t-4 border-stone-900 z-10 flex flex-col animate-in slide-in-from-bottom-10 shadow-[-4px_-4px_10px_rgba(0,0,0,0.1)]">
+                          
+                          {/* En-tête du Panneau */}
+                          <div className={`px-6 py-3 border-b-2 border-stone-900 flex justify-between items-center ${isMultiSelectionMode ? 'bg-blue-50' : 'bg-white'}`}>
+                            <div className="flex items-center gap-4">
+                              {isMultiSelectionMode ? (
+                                <>
+                                  <h3 className="font-black text-blue-800 uppercase text-xs tracking-widest flex items-center gap-2">
+                                      <i className="fa-regular fa-square-check text-lg"></i>
+                                      Sélection Multiple ({multiSelectedIds.length})
+                                  </h3>
+                                  <button 
+                                    onClick={handleBulkDelete}
+                                    className="bg-red-500 border-2 border-stone-900 text-white px-4 py-2 text-xs font-black hover:bg-red-600 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                  >
+                                    <i className="fa-solid fa-trash"></i>
+                                    TOUT SUPPRIMER
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <h3 className="font-black text-stone-900 uppercase text-xs tracking-widest flex items-center gap-2">
+                                      <i className="fa-solid fa-lightbulb text-yellow-500"></i>
+                                      {hasSuggestions ? `Cultures Manquantes (${suggestions.length})` : "Analyse Terminée"}
+                                  </h3>
+                                  {hasSuggestions && (
+                                    <button 
+                                      onClick={handleAutoPlaceSuggestions}
+                                      className="bg-emerald-400 border-2 border-stone-900 text-stone-900 px-3 py-1 text-xs font-black hover:bg-emerald-300 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                    >
+                                      <i className="fa-solid fa-wand-magic-sparkles"></i>
+                                      PLACER SÉLECTION ({suggestions.filter(s => s.selected).length})
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            <button onClick={() => { setSuggestions([]); setMultiSelectedIds([]); setShowSuggestionsPanel(false); }} className="text-stone-900 hover:text-red-500 text-xs font-bold uppercase flex items-center gap-1">
+                                <i className="fa-solid fa-times"></i> Fermer
+                            </button>
+                          </div>
+
+                          {/* Contenu Défilant */}
+                          <div className="flex-1 overflow-x-auto p-4 flex gap-4 items-center">
+                            
+                            {/* CAS 0 : Pas de suggestions (Tout est bon) */}
+                            {!isMultiSelectionMode && !hasSuggestions && (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-stone-500 opacity-80">
+                                    <i className="fa-solid fa-check-circle text-4xl text-emerald-500 mb-2"></i>
+                                    <p className="text-sm font-bold uppercase">Votre plan répond à vos objectifs !</p>
+                                    <p className="text-xs">Aucune culture supplémentaire nécessaire.</p>
+                                </div>
+                            )}
+
+                            {/* CAS 1 : Mode Sélection Multiple */}
+                            {isMultiSelectionMode && multiSelectedIds.map((id) => {
+                              const p = displayedPlots.find(plot => plot.id === id);
+                              if(!p) return null;
+                              const cult = CULTURES.find(c => c.id === p.plantedCultureId);
+                              return (
+                                <div key={id} className="shrink-0 w-48 bg-blue-100 border-2 border-stone-900 p-3 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] flex flex-col gap-2 relative group hover:bg-red-50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                      {cult ? (
+                                        <div className="w-10 h-10 bg-white border-2 border-stone-900 flex items-center justify-center shrink-0">
+                                          <img src={cult.image} className="w-8 h-8 object-contain" />
+                                        </div>
+                                      ) : (
+                                        <div className="w-10 h-10 bg-stone-200 border-2 border-stone-900 flex items-center justify-center"><i className="fa-solid fa-cube text-stone-400"></i></div>
+                                      )}
+                                      <div className="overflow-hidden">
+                                        <h4 className="font-black text-stone-900 text-xs leading-none truncate uppercase" title={p.name}>{p.name}</h4>
+                                        <span className="text-[10px] font-bold text-stone-600 block mt-1">{p.width}m x {p.height}m</span>
+                                      </div>
+                                    </div>
+                                    {/* Bouton de suppression individuel au survol */}
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleIndividualDelete(id); }}
+                                        className="absolute top-2 right-2 text-stone-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                        title="Supprimer cet élément"
+                                    >
+                                        <i className="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                              )
+                            })}
+
+                            {/* CAS 2 : Mode Suggestions (Si pas de sélection multiple) */}
+                            {!isMultiSelectionMode && hasSuggestions && suggestions.map((sug, idx) => {
+                              const cult = CULTURES.find(c => c.id === sug.cultureId);
+                              if(!cult) return null;
+                              return (
+                                <div 
+                                  key={idx} 
+                                  className={`shrink-0 w-64 bg-white border-2 border-stone-900 p-3 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] transition-all flex flex-col gap-2 relative group cursor-pointer hover:bg-yellow-50 hover:translate-x-[-1px] hover:translate-y-[-1px] ${sug.selected ? 'ring-2 ring-emerald-500' : ''}`}
+                                  onClick={() => toggleSuggestionSelection(sug.cultureId)}
+                                >
+                                    <div className="absolute top-2 right-2">
+                                      {sug.selected ? <i className="fa-solid fa-square-check text-emerald-600 text-lg"></i> : <i className="fa-regular fa-square text-stone-300 text-lg"></i>}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 bg-stone-100 border-2 border-stone-900 flex items-center justify-center shrink-0">
+                                        <img src={cult.image} className="w-8 h-8 object-contain" />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-black text-stone-900 text-sm leading-none uppercase">{cult.name}</h4>
+                                        <span className="text-[10px] font-bold text-red-500 bg-red-100 px-1 border border-stone-900 mt-1 inline-block">Manque {sug.missingPlants} plants</span>
+                                      </div>
+                                    </div>
+                                    <div className="bg-stone-100 border border-stone-900 p-2 text-[10px] text-stone-600 flex justify-between mt-1">
+                                      <span className="font-bold">Suggéré:</span>
+                                      <span className="font-black text-stone-900">{sug.suggestedWidth}m x {sug.suggestedHeight}m</span>
+                                    </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Zone de Suggestions (Liste horizontale sous le plan) */}
-                  {suggestions.length > 0 && (
-                    <div className="h-48 shrink-0 bg-white border-t border-stone-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-10 flex flex-col animate-in slide-in-from-bottom-10">
-                      <div className="px-6 py-3 border-b border-stone-100 flex justify-between items-center bg-stone-50">
-                        <h3 className="font-black text-stone-600 uppercase text-xs tracking-widest flex items-center gap-2">
-                           <i className="fa-solid fa-lightbulb text-amber-500"></i>
-                           Propositions d'Ajout ({suggestions.length})
-                        </h3>
-                        <button onClick={() => setSuggestions([])} className="text-stone-400 hover:text-red-400 text-xs">Fermer</button>
-                      </div>
-                      <div className="flex-1 overflow-x-auto p-4 flex gap-4 items-center">
-                        {suggestions.map((sug, idx) => {
-                           const cult = CULTURES.find(c => c.id === sug.cultureId);
-                           if(!cult) return null;
-                           return (
-                             <div key={idx} className="shrink-0 w-64 bg-white border border-stone-200 rounded-xl p-3 shadow-sm hover:border-emerald-400 hover:shadow-md transition-all flex flex-col gap-2 relative group">
-                                <div className="flex items-center gap-3">
-                                  <img src={cult.image} className="w-10 h-10 rounded-lg object-cover" />
-                                  <div>
-                                    <h4 className="font-bold text-stone-800 text-sm leading-none">{cult.name}</h4>
-                                    <span className="text-[10px] font-bold text-red-500">Manque {sug.missingPlants} plants</span>
-                                  </div>
-                                </div>
-                                <div className="bg-stone-50 rounded-lg p-2 text-[10px] text-stone-500 flex justify-between">
-                                  <span>Dim. suggérée:</span>
-                                  <span className="font-bold text-stone-800">{sug.suggestedWidth}m x {sug.suggestedHeight}m</span>
-                                </div>
-                                <button 
-                                  onClick={() => handleAddSuggestionToPlan(sug)}
-                                  className="mt-1 w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                >
-                                  <i className="fa-solid fa-plus"></i> PLACER SUR LE PLAN
-                                </button>
-                             </div>
-                           )
-                        })}
-                      </div>
+                  {/* Overlay Panel (Détails Culture ou Editeur Parcelle) */}
+                  <div 
+                    className={`fixed inset-y-0 right-0 z-[60] transform transition-transform duration-500 ease-in-out shadow-2xl ${
+                      selectedCulture || selectedPlot ? 'translate-x-0' : 'translate-x-full'
+                    }`}
+                  >
+                    <div className="h-full bg-white flex flex-col border-l-4 border-stone-900 w-[450px] max-w-[90vw] shadow-[ -10px_0px_20px_rgba(0,0,0,0.1)]">
+                      {selectedCulture && (
+                        <CultureDetails 
+                          culture={selectedCulture} 
+                          config={config}
+                          onClose={() => setSelectedCulture(null)}
+                          onAddToPlan={handleAddCultureFromDetails}
+                        />
+                      )}
+                      {selectedPlot && (
+                        <PlotEditor 
+                          plot={selectedPlot} 
+                          config={config} 
+                          onUpdate={handleUpdatePlot}
+                          onDelete={handleDeletePlot}
+                          onAddPlot={handleAddPlot}
+                          onClose={() => setSelectedPlot(null)}
+                        />
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Panneau latéral droit contextuel - Overlay SUPPRIMÉ ICI */}
-              <div 
-                className={`fixed inset-y-0 right-0 z-50 transform transition-transform duration-500 ease-in-out shadow-2xl ${
-                  selectedCulture || selectedPlot ? 'translate-x-0' : 'translate-x-full'
-                }`}
-              >
-                <div className="h-full bg-white flex flex-col border-l border-stone-200 w-[450px] max-w-[90vw]">
-                  {selectedCulture && (
-                    <CultureDetails 
-                      culture={selectedCulture} 
-                      config={config}
-                      onClose={() => setSelectedCulture(null)}
-                      onAddToPlan={handleAddCultureFromDetails}
-                    />
-                  )}
-                  {selectedPlot && (
-                    <PlotEditor 
-                      plot={selectedPlot} 
-                      config={config} 
-                      onUpdate={handleUpdatePlot}
-                      onDelete={handleDeletePlot}
-                      onAddPlot={handleAddPlot}
-                      onClose={() => setSelectedPlot(null)}
-                    />
-                  )}
+              {currentTab === 'calendar' && (
+                <div className="h-full w-full overflow-y-auto bg-[#fffdf5]">
+                  <GlobalCalendar />
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {currentTab === 'calendar' && (
-            <div className="h-full w-full overflow-y-auto bg-stone-50">
-              <GlobalCalendar />
-            </div>
-          )}
-
-          {currentTab === 'sufficiency' && (
-            <div className="h-full w-full overflow-hidden">
-              <AutosufficiencyTab config={config} onConfigChange={setConfig} />
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
+              {currentTab === 'sufficiency' && (
+                <div className="h-full w-full overflow-hidden">
+                  <AutosufficiencyTab config={config} onConfigChange={setConfig} plots={plots} onRequestPlanning={handleRequestPlanningFromVivier} onOpenCultureDetails={handleOpenCultureDetails} />
+                </div>
+              )}
+            </main>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

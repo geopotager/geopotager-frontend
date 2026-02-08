@@ -53,107 +53,120 @@ const SetupPanel: React.FC<SetupPanelProps> = ({
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-xl border-b border-stone-200 px-6 py-4 flex flex-wrap items-end justify-between shadow-sm z-40 gap-4 min-h-[80px]">
+    <div className="bg-white border-b-2 border-black px-6 py-4 flex flex-wrap items-end justify-between shadow-sm z-40 gap-4 min-h-[80px]">
       <div className="flex items-end gap-6 flex-wrap">
         {/* Terrain Dimensions */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none">Terrain (m)</label>
-          <div className="flex items-center gap-2 h-9">
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-black text-black uppercase tracking-widest bg-yellow-300 inline-block px-1 border border-black">Terrain (m)</label>
+          <div className="flex items-center gap-2 h-10">
             <input 
               type="number" value={config.terrainWidth}
               onChange={(e) => onConfigChange({...config, terrainWidth: parseInt(e.target.value)})}
-              className="bg-stone-100 border border-stone-200 rounded-lg px-2 text-xs font-black w-14 h-full outline-none focus:ring-2 focus:ring-emerald-500"
+              className="bg-white border-2 border-black px-2 text-sm font-black w-16 h-full outline-none focus:bg-yellow-200 focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
             />
-            <span className="text-stone-300 text-[10px] self-center">×</span>
+            <span className="text-black font-black text-lg">×</span>
             <input 
               type="number" value={config.terrainHeight}
               onChange={(e) => onConfigChange({...config, terrainHeight: parseInt(e.target.value)})}
-              className="bg-stone-100 border border-stone-200 rounded-lg px-2 text-xs font-black w-14 h-full outline-none focus:ring-2 focus:ring-emerald-500"
+              className="bg-white border-2 border-black px-2 text-sm font-black w-16 h-full outline-none focus:bg-yellow-200 focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
             />
           </div>
         </div>
 
         {/* Household Dropdown */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none">Foyer</label>
-          <div className="h-9">
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-black text-black uppercase tracking-widest bg-lime-300 inline-block px-1 border border-black">Foyer</label>
+          <div className="h-10">
             <select 
               value={config.peopleCount}
               onChange={(e) => onConfigChange({ ...config, peopleCount: parseInt(e.target.value) as any })}
-              className="h-full bg-stone-100 border border-stone-200 rounded-lg px-3 text-xs font-black outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              className="h-full bg-white border-2 border-black px-3 text-sm font-black outline-none focus:bg-lime-200 focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all appearance-none pr-8"
+              style={{backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23000000%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right .7em top 50%', backgroundSize: '.65em auto'}}
             >
               {[1, 2, 3, 4].map(num => (
-                <option key={num} value={num}>{num} {num > 1 ? 'Pers.' : 'Pers.'}</option>
+                <option key={num} value={num}>{num} {num > 1 ? 'Personnes' : 'Personne'}</option>
               ))}
             </select>
           </div>
         </div>
 
         {/* Location */}
-        <form onSubmit={handleAddressSubmit} className="flex flex-col gap-1.5">
-          <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none">Localisation</label>
-          <div className="h-9 relative">
+        <form onSubmit={handleAddressSubmit} className="flex flex-col gap-1">
+          <label className="text-[10px] font-black text-black uppercase tracking-widest bg-purple-300 inline-block px-1 border border-black">Localisation</label>
+          <div className="h-10 relative">
             <input 
               type="text" 
               value={addressInput}
               onChange={(e) => setAddressInput(e.target.value)}
               placeholder="Ville, Pays..."
-              className="h-full bg-stone-100 border border-stone-200 rounded-lg px-3 text-xs font-bold focus:ring-2 focus:ring-emerald-500 outline-none w-48"
+              className="h-full bg-white border-2 border-black px-3 text-sm font-bold focus:bg-purple-200 focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] outline-none w-48 transition-all"
             />
-            {isGeocoding && <i className="fa-solid fa-spinner fa-spin absolute right-2 top-3 text-emerald-500 text-[10px]"></i>}
+            {isGeocoding && <i className="fa-solid fa-spinner fa-spin absolute right-2 top-3 text-black text-sm"></i>}
           </div>
         </form>
 
-        <div className="h-9 w-px bg-stone-200 hidden xl:block mx-2"></div>
+        <div className="h-10 w-0.5 bg-black hidden xl:block mx-2"></div>
 
-        {/* Action Buttons Group - Aligned with inputs via flex-end */}
-        <div className="flex items-center gap-2 h-9">
+        {/* Action Buttons Group */}
+        <div className="flex items-center gap-3 h-10">
           <button 
             onClick={onAutoGenerate}
             disabled={isAnalyzing}
-            className={`h-full px-4 rounded-xl text-[10px] font-black shadow-sm transition-all flex items-center gap-2 ${isAnalyzing ? 'bg-stone-100 text-stone-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-105'}`}
+            className={`h-full px-4 border-2 border-black text-xs font-black transition-all flex items-center gap-2 uppercase ${
+              isAnalyzing 
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+              : 'bg-lime-400 text-black hover:bg-lime-300 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+            }`}
           >
             <i className={`fa-solid ${isAnalyzing ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
-            CALCULER
+            Calculer
           </button>
 
           <button 
             onClick={onAddPlot}
-            className="h-full bg-emerald-100 text-emerald-700 px-4 rounded-xl text-[10px] font-black hover:bg-emerald-200 transition-all flex items-center gap-2"
+            className="h-full bg-yellow-300 text-black border-2 border-black px-4 text-xs font-black hover:bg-yellow-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2 uppercase"
           >
-            <i className="fa-solid fa-plus-circle"></i> AJOUTER
+            <i className="fa-solid fa-plus-circle"></i> Ajouter
           </button>
 
           <button 
             onClick={onToggleSunPath} 
-            className={`h-full w-10 rounded-xl flex items-center justify-center transition-all border ${showSunPath ? 'bg-amber-400 border-amber-500 text-white shadow-inner shadow-amber-600 ring-2 ring-amber-200' : 'bg-stone-100 border-stone-200 text-stone-400 hover:bg-stone-200'}`}
+            className={`h-full w-10 border-2 border-black flex items-center justify-center transition-all ${
+              showSunPath 
+              ? 'bg-yellow-400 text-black translate-x-[2px] translate-y-[2px] shadow-none' 
+              : 'bg-white text-gray-400 hover:bg-yellow-200 hover:text-black hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+            }`}
             title="Course du soleil"
           >
-            <i className={`fa-solid fa-sun text-sm ${showSunPath ? 'animate-spin-slow' : 'text-amber-500'}`}></i>
+            <i className={`fa-solid fa-sun text-sm ${showSunPath ? 'animate-spin-slow' : ''}`}></i>
           </button>
 
           <button 
             onClick={onToggleCalibration} 
-            className={`h-full px-4 rounded-xl text-[10px] font-black border transition-all flex items-center gap-2 ${isCalibrating ? 'bg-amber-100 border-amber-300 text-amber-800 shadow-inner' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'}`}
+            className={`h-full px-4 border-2 border-black text-xs font-black transition-all flex items-center gap-2 uppercase ${
+              isCalibrating 
+              ? 'bg-purple-400 text-black translate-x-[2px] translate-y-[2px] shadow-none' 
+              : 'bg-white text-black hover:bg-purple-200 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+            }`}
           >
-            <i className={`fa-solid ${isCalibrating ? 'fa-check' : 'fa-image'}`}></i>
-            {isCalibrating ? 'VALIDER' : 'SATELLITE'}
+            <i className={`fa-solid ${isCalibrating ? 'fa-check' : 'fa-satellite'}`}></i>
+            {isCalibrating ? 'Valider' : 'Sat'}
           </button>
         </div>
       </div>
 
-      {/* Real Sufficiency Score Indicator */}
-      <div className="hidden md:flex items-center gap-4 pl-4 border-l border-stone-100 h-12">
+      {/* Real Sufficiency Score Indicator - NeoBrut */}
+      <div className="hidden md:flex items-center gap-4 pl-4 border-l-2 border-black h-12">
          <div className="flex flex-col items-end justify-center h-full">
-            <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none mb-1">Autosuffisance</span>
-            <span className="text-xs font-bold text-emerald-600">Réelle</span>
+            <span className="text-[10px] font-black text-black uppercase tracking-widest leading-none mb-1 bg-white border border-black px-1">Autonomie</span>
+            <span className="text-sm font-black text-lime-600 bg-gray-100 px-1 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Réelle</span>
          </div>
-         <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
-            <svg className="w-full h-full transform -rotate-90 overflow-visible">
-              <circle cx="24" cy="24" r="18" fill="transparent" stroke="#e7e5e4" strokeWidth="4" />
-              <circle cx="24" cy="24" r="18" fill="transparent" stroke={sufficiencyScore >= 100 ? '#10b981' : sufficiencyScore > 50 ? '#f59e0b' : '#ef4444'} strokeWidth="4" strokeDasharray={2 * Math.PI * 18} strokeDashoffset={2 * Math.PI * 18 * (1 - sufficiencyScore/100)} strokeLinecap="round" className="transition-all duration-1000" />
+         <div className="relative w-14 h-14 flex items-center justify-center shrink-0 bg-black rounded-full border-2 border-black">
+            <svg className="w-full h-full transform -rotate-90 overflow-visible p-1">
+              <circle cx="24" cy="24" r="18" fill="transparent" stroke="#444" strokeWidth="6" />
+              <circle cx="24" cy="24" r="18" fill="transparent" stroke={sufficiencyScore >= 100 ? '#a3e635' : sufficiencyScore > 50 ? '#facc15' : '#ef4444'} strokeWidth="6" strokeDasharray={2 * Math.PI * 18} strokeDashoffset={2 * Math.PI * 18 * (1 - sufficiencyScore/100)} strokeLinecap="butt" className="transition-all duration-1000" />
             </svg>
-            <span className={`absolute text-[10px] font-black ${sufficiencyScore >= 100 ? 'text-emerald-600' : sufficiencyScore > 50 ? 'text-amber-500' : 'text-red-500'}`}>{sufficiencyScore}%</span>
+            <span className={`absolute text-xs font-black ${sufficiencyScore >= 100 ? 'text-lime-400' : sufficiencyScore > 50 ? 'text-yellow-400' : 'text-red-400'}`}>{sufficiencyScore}%</span>
          </div>
       </div>
     </div>

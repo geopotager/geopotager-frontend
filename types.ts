@@ -1,9 +1,9 @@
 
 export type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
-export type PlotType = 'culture' | 'building' | 'tree' | 'pond' | 'water_tank';
+export type PlotType = 'culture' | 'building' | 'tree' | 'pond' | 'water_tank' | 'greenhouse' | 'coop' | 'beehive' | 'path';
 export type ShapeType = 'rect' | 'circle';
-export type CultureCategory = 'Racines' | 'Fruits' | 'Feuilles' | 'Légumineuses' | 'Tubercules' | 'Bulbes' | 'Aromatiques' | 'Petits Fruits' | 'Céréales';
+export type CultureCategory = 'Racines' | 'Fruits' | 'Feuilles' | 'Légumineuses' | 'Tubercules' | 'Bulbes' | 'Aromatiques' | 'Petits Fruits' | 'Céréales' | 'Fleurs' | 'Arbres Fruitiers' | 'Perenne';
 
 export interface Disease {
   name: string;
@@ -78,6 +78,10 @@ export interface Plot {
   plantedCultureId?: string;
   selectedVariety?: string; // Garde le nom de la variété sélectionnée
   customImage?: string;
+  // Spécifique Serre
+  subPlots?: Plot[]; // Pour le plan intérieur de la serre
+  // Spécifique Poulailler
+  chickenCount?: number;
 }
 
 export interface GardenConfig {

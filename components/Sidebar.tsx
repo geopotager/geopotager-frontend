@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { CULTURES, MONTHS_SHORT } from '../constants';
+import { CULTURES, CATEGORY_COLORS } from '../constants';
 import { Culture, GardenConfig, CultureCategory } from '../types';
 
 interface SidebarProps {
@@ -35,109 +35,102 @@ const Sidebar: React.FC<SidebarProps> = ({
     return groups;
   }, []);
 
-  const categoriesOrder: CultureCategory[] = ['Fruits', 'Racines', 'Feuilles', 'Légumineuses', 'Aromatiques', 'Bulbes', 'Tubercules', 'Petits Fruits'];
+  const categoriesOrder: CultureCategory[] = ['Fruits', 'Racines', 'Feuilles', 'Légumineuses', 'Aromatiques', 'Bulbes', 'Tubercules', 'Petits Fruits', 'Arbres Fruitiers', 'Perenne', 'Céréales', 'Fleurs'];
 
   return (
-    <div className="w-80 h-screen bg-stone-50 border-r border-stone-200 flex flex-col shadow-2xl z-20 print:hidden">
-      <div className="p-8 border-b border-stone-200 bg-emerald-800 text-white relative overflow-hidden">
-        <h1 className="text-2xl font-black flex items-center gap-3 tracking-tighter">
-          <i className="fa-solid fa-seedling text-emerald-400"></i>
+    <div className="w-80 h-screen bg-white border-r-4 border-black flex flex-col z-20 print:hidden shadow-[4px_0px_0px_0px_rgba(0,0,0,0.2)]">
+      <div className="p-6 border-b-4 border-black bg-black text-white relative overflow-hidden">
+        <h1 className="text-2xl font-sans font-black flex items-center gap-3 tracking-tighter text-white">
+          <i className="fa-solid fa-leaf text-lime-400"></i>
           GÉOPOTAGER
         </h1>
-        <p className="text-[10px] text-emerald-200 mt-1 font-bold uppercase tracking-widest opacity-80">Intelligence Vivrière</p>
+        <p className="text-[10px] text-black mt-2 font-bold uppercase tracking-widest bg-lime-400 inline-block px-2 py-0.5 border-2 border-black shadow-[2px_2px_0px_0px_#ffffff]">Intelligence Vivrière</p>
       </div>
 
-      <nav className="p-4 space-y-1 shrink-0">
+      <nav className="p-4 space-y-3 shrink-0 bg-gray-100 border-b-4 border-black">
         <button 
           onClick={onOpenSettings}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${currentTab === 'garden' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-600 hover:bg-stone-200'}`}
+          className={`w-full flex items-center justify-between px-4 py-3 border-2 border-black transition-all duration-100 font-mono ${
+            currentTab === 'garden' 
+            ? 'bg-black text-lime-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]' 
+            : 'bg-yellow-300 text-black hover:bg-yellow-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px]'
+          }`}
         >
           <div className="flex items-center gap-3">
             <i className="fa-solid fa-map"></i>
-            <span className="font-bold text-sm">Mon Plan de Jardin</span>
+            <span className="font-bold text-sm uppercase">Plan Terrain</span>
           </div>
         </button>
         <button 
           onClick={onOpenSufficiency}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${currentTab === 'sufficiency' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-600 hover:bg-stone-200'}`}
+          className={`w-full flex items-center justify-between px-4 py-3 border-2 border-black transition-all duration-100 font-mono ${
+            currentTab === 'sufficiency' 
+            ? 'bg-black text-lime-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]' 
+            : 'bg-yellow-300 text-black hover:bg-yellow-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px]'
+          }`}
         >
           <div className="flex items-center gap-3">
             <i className="fa-solid fa-chart-pie"></i>
-            <span className="font-bold text-sm">Autosuffisance {config ? config.sufficiencyTarget : 50}%</span>
+            <span className="font-bold text-sm uppercase">Votre Vivier</span>
           </div>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 font-mono ${currentTab === 'sufficiency' ? 'bg-lime-300 text-black' : 'bg-black text-white'}`}>{config ? config.sufficiencyTarget : 50}%</span>
         </button>
         <button 
           onClick={onOpenCalendar}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${currentTab === 'calendar' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-600 hover:bg-stone-200'}`}
+          className={`w-full flex items-center justify-between px-4 py-3 border-2 border-black transition-all duration-100 font-mono ${
+            currentTab === 'calendar' 
+            ? 'bg-black text-lime-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]' 
+            : 'bg-yellow-300 text-black hover:bg-yellow-200 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px]'
+          }`}
         >
           <div className="flex items-center gap-3">
             <i className="fa-solid fa-calendar"></i>
-            <span className="font-bold text-sm">Planning Global</span>
+            <span className="font-bold text-sm uppercase">Planning</span>
           </div>
         </button>
       </nav>
 
-      <div className="flex-1 overflow-y-auto px-4 py-2 border-t border-stone-100">
-        <h2 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-4 px-2">Bibliothèque de Cultures</h2>
+      <div className="flex-1 overflow-y-auto px-4 py-4 bg-white">
+        <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 px-2 py-1 border-b-2 border-gray-300 font-mono">Bibliothèque des cultures</h2>
         
-        <div className="space-y-6 pb-6">
+        <div className="space-y-8 pb-6">
           {categoriesOrder.map(cat => {
             const cultures = groupedCultures[cat];
             if (!cultures || cultures.length === 0) return null;
+            const catColor = CATEGORY_COLORS[cat] || 'bg-gray-200';
 
             return (
               <div key={cat}>
-                <h3 className="text-xs font-black text-stone-600 uppercase mb-2 px-2 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <h3 className={`text-xs font-black text-black uppercase mb-3 px-2 py-1.5 border-2 border-black flex items-center justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${catColor}`}>
                   {cat}
+                  <span className="bg-black text-white text-[10px] w-5 h-5 flex items-center justify-center font-mono">{cultures.length}</span>
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-3 pl-1">
                   {cultures.map(culture => (
                     <div
                       key={culture.id}
                       onClick={() => onSelectCulture(culture)}
-                      className={`w-full p-2.5 rounded-xl border transition-all flex flex-col gap-2 cursor-pointer group ${
-                        selectedCulture?.id === culture.id ? 'bg-white border-emerald-500 shadow-md ring-2 ring-emerald-100' : 'bg-white border-transparent hover:border-stone-200 hover:shadow-sm'
+                      className={`w-full p-2 border-2 transition-all cursor-pointer group relative ${
+                        selectedCulture?.id === culture.id 
+                        ? 'bg-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px] z-10 ring-2 ring-black' 
+                        : 'bg-white border-black hover:bg-lime-100 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center shadow-sm overflow-hidden shrink-0">
-                          <img src={culture.image} className="w-8 h-8 object-contain" />
+                        <div className="w-10 h-10 border-2 border-black bg-gray-100 flex items-center justify-center shrink-0">
+                          <img src={culture.image} className="w-7 h-7 object-contain" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center">
-                            <p className="text-xs font-bold text-stone-800 truncate">{culture.name}</p>
+                            <p className="text-xs font-bold text-black truncate uppercase font-mono">{culture.name}</p>
                           </div>
                           <div className="flex gap-2 mt-1">
-                             <span className="text-[8px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded flex items-center gap-1">
-                               <i className={`fa-solid fa-sun ${culture.exposure === 'Soleil' ? 'text-amber-500' : 'text-stone-400'}`}></i>
+                             <span className="text-[8px] font-bold text-black bg-yellow-300 border border-black px-1 py-0.5 flex items-center gap-1">
+                               <i className={`fa-solid fa-sun ${culture.exposure === 'Soleil' ? 'text-orange-500' : 'text-gray-400'}`}></i>
                                {culture.exposure}
-                             </span>
-                             <span className="text-[8px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                               <i className="fa-solid fa-droplet"></i>
-                               {culture.waterNeeds}
                              </span>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Mini Calendar Visualization with Letters */}
-                      <div className="flex gap-0.5 h-4 w-full rounded-md overflow-hidden bg-stone-100/50">
-                        {Array.from({length: 12}).map((_, i) => {
-                          const month = i + 1;
-                          let color = 'text-stone-300';
-                          let bg = 'bg-transparent';
-                          
-                          if (culture.planning.harvest.includes(month as any)) { bg = 'bg-red-400'; color = 'text-white'; }
-                          else if (culture.planning.planting.includes(month as any)) { bg = 'bg-amber-400'; color = 'text-white'; }
-                          else if (culture.planning.sowing.includes(month as any)) { bg = 'bg-emerald-400'; color = 'text-white'; }
-                          
-                          return (
-                            <div key={i} className={`flex-1 ${bg} flex items-center justify-center text-[7px] font-bold ${color}`} title={`Mois ${month}`}>
-                              {MONTHS_SHORT[i]}
-                            </div>
-                          )
-                        })}
                       </div>
                     </div>
                   ))}
