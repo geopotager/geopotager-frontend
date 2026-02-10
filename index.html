@@ -8,42 +8,59 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-      /* Curseur Main qui pointe animé */
-      body, button, a, div, select, input {
-        cursor: url("data:image/svg+xml;utf8,<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 512 512'><g><path fill='black' stroke='white' stroke-width='15' d='M376,188.4c0-15.4-12.4-27.8-27.8-27.8H202.9V52.8c0-15.4-12.4-27.8-27.8-27.8s-27.8,12.4-27.8,27.8v229.2c-20.9,13.2-34.9,37-34.9,64.6c0,41.3,33.5,74.8,74.8,74.8s74.8-33.5,74.8-74.8c0-2-0.1-4-0.3-6h111.7c15.4,0,27.8-12.4,27.8-27.8s-12.4-27.8-27.8-27.8H187.9c-2.5-30.8,18.8-58.4,47.4-65.7h112.9C363.6,216.2,376,203.8,376,188.4z'/><animateTransform attributeName='transform' type='scale' attributeType='XML' values='1;1.05;1' begin='0s' dur='1.2s' repeatCount='indefinite' /></g></svg>") 10 2, auto !important;
+      /* Curseur par défaut : Flèche Néo-Brutaliste Marron */
+      body {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='%235D4037' stroke='none'><path d='M4.5 2l15 15-7 2 5 5-3 2-5-5-5 5V2z'/></svg>") 0 0, auto;
       }
       
-      .cursor-grab { cursor: grab !important; }
-      .cursor-grabbing { cursor: grabbing !important; }
+      /* Curseur Outil Jardin */
+      .cursor-garden-tool {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='%235D4037' stroke='none'><path d='M4.5 2l15 15-7 2 5 5-3 2-5-5-5 5V2z'/></svg>") 0 0, pointer !important;
+      }
+
+      /* Curseur Bêche (Bibliothèque & Sélection) */
+      .cursor-spade {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><rect x='14' y='2' width='4' height='14' fill='%238D6E63'/><path d='M10 16 h12 v10 h-12 z' fill='%23757575'/><rect x='12' y='26' width='8' height='2' fill='%23616161'/></svg>") 16 16, pointer !important;
+      }
+
+      /* Curseur Pan : Croix directionnelle Technique (CAD Style) */
+      .cursor-pan-technical {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='white' stroke='%231f2937' stroke-width='2'><path d='M12 2l3 3m-3-3l-3 3m3-3v20m0 0l3-3m-3 3l-3-3M2 12l3-3m-3 3l3 3m-3-3h20m0 0l-3-3m3 3l-3 3'/></svg>") 16 16, move !important;
+      }
+      .cursor-pan-technical:active {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='%231f2937' stroke='white' stroke-width='2'><path d='M12 2l3 3m-3-3l-3 3m3-3v20m0 0l3-3m-3 3l-3-3M2 12l3-3m-3 3l3 3m-3-3h20m0 0l-3-3m3 3l-3 3'/></svg>") 16 16, move !important;
+      }
       
-      /* Scrollbar Technique */
+      /* Scrollbar Douce */
       ::-webkit-scrollbar { width: 10px; }
-      ::-webkit-scrollbar-track { background: #d9f99d; } /* lime-300 */
-      ::-webkit-scrollbar-thumb { background: #000000; border: 2px solid #d9f99d; }
-      ::-webkit-scrollbar-thumb:hover { background: #333; }
+      ::-webkit-scrollbar-track { background: #EFEBE9; } 
+      ::-webkit-scrollbar-thumb { background: #8D6E63; border: 2px solid #EFEBE9; }
+      ::-webkit-scrollbar-thumb:hover { background: #6D4C41; }
 
-      /* Animation Intro 3D Sillons */
-      @keyframes introLandscape {
-        0% { transform: perspective(1000px) rotateX(60deg) translateY(0) scale(1.5); opacity: 0; }
-        40% { transform: perspective(1000px) rotateX(40deg) translateY(-50px) scale(1.2); opacity: 1; }
-        100% { transform: perspective(1000px) rotateX(0deg) translateY(0) scale(1); opacity: 1; }
+      /* Motif Brutalist Terreux */
+      .pattern-blueprint {
+        background-image: 
+          linear-gradient(rgba(141, 110, 99, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(141, 110, 99, 0.1) 1px, transparent 1px);
+        background-size: 40px 40px;
       }
 
-      @keyframes furrowScroll {
-        0% { background-position: 0 0; }
-        100% { background-position: 0 100px; }
-      }
-
+      /* Animation d'intro landscape */
       .intro-container {
         animation: introLandscape 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         transform-origin: center bottom;
       }
-      
-      .pattern-blueprint {
-        background-image: 
-          linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
-        background-size: 40px 40px;
+      @keyframes introLandscape {
+        0% { transform: perspective(1000px) rotateX(60deg) translateY(0) scale(1.5); opacity: 0; }
+        100% { transform: perspective(1000px) rotateX(0deg) translateY(0) scale(1); opacity: 1; }
+      }
+
+      /* Style pour le slider vertical */
+      .vertical-range {
+        writing-mode: bt-lr; /* IE */
+        appearance: slider-vertical;
+        width: 12px;
+        height: 40px;
       }
     </style>
 <script type="importmap">
@@ -59,7 +76,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-lime-400 text-black font-sans h-full w-full overflow-hidden">
+<body class="bg-[#EFEBE9] text-[#3E2723] font-sans h-full w-full overflow-hidden">
     <div id="root" class="h-full w-full"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

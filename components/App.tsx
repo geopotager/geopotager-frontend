@@ -7,9 +7,9 @@ import GlobalCalendar from './components/GlobalCalendar';
 import SetupPanel from './components/SetupPanel';
 import AutosufficiencyTab from './components/AutosufficiencyTab';
 import PlotEditor from './components/PlotEditor';
-import { Culture, Plot, GardenConfig, PlotSuggestion } from './types';
-import { CULTURES, INITIAL_PLOTS } from './constants';
-import { getGardenAnalysis } from './lib/gemini';
+import { Culture, Plot, GardenConfig, PlotSuggestion } from '../types';
+import { CULTURES, INITIAL_PLOTS } from '../constants';
+import { getGardenAnalysis } from '../lib/gemini';
 import { generateMissingSuggestions, countExistingPlants, calculateNeeds } from '../lib/plantCalculations';
 
 const App: React.FC = () => {
@@ -60,6 +60,15 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (aiAnalysis) {
+      const timer = setTimeout(() => {
+        setAiAnalysis(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [aiAnalysis]);
+
+  useEffect(() => {
     localStorage.setItem('potager_config', JSON.stringify(config));
   }, [config]);
 
@@ -91,12 +100,13 @@ const App: React.FC = () => {
 
     if (totalPlantsNeeded === 0) return 0;
 
-    let totalPlantsOnPlan = 0;
+    let totalAnnualYieldPotential = 0;
     CULTURES.forEach(c => {
-        totalPlantsOnPlan += countExistingPlants(plots, c.id);
+        // countExistingPlants retourne maintenant (emplacements * successions)
+        totalAnnualYieldPotential += countExistingPlants(plots, c.id);
     });
 
-    return Math.min(100, Math.round((totalPlantsOnPlan / totalPlantsNeeded) * 100));
+    return Math.min(100, Math.round((totalAnnualYieldPotential / totalPlantsNeeded) * 100));
   }, [plots, config.peopleCount, config.sufficiencyTarget]);
 
 
@@ -157,14 +167,19 @@ const App: React.FC = () => {
 
   const handleAddCultureFromDetails = (cultureId: string, variety?: string) => {
     const culture = CULTURES.find(c => c.id === cultureId);
+    
+    // Détection auto de la forme pour les arbres
+    const isTree = culture?.category === 'Arbres Fruitiers' || culture?.category === 'Petits Fruits';
+    const defaultShape = isTree ? 'circle' : 'rect';
+
     const newPlot: Plot = {
       id: Math.random().toString(36).substr(2, 9),
       name: culture ? culture.name : 'Nouvelle Culture',
       type: 'culture',
-      shape: 'rect',
+      shape: defaultShape,
       x: 1, y: 1,
-      width: 2,
-      height: 1,
+      width: isTree ? 3 : 2, // Plus grand pour les arbres par défaut
+      height: isTree ? 3 : 1,
       exposure: 'Soleil',
       plantedCultureId: cultureId,
       selectedVariety: variety,
@@ -184,11 +199,14 @@ const App: React.FC = () => {
     const culture = CULTURES.find(c => c.id === suggestion.cultureId);
     if (!culture) return;
 
+    // Forme auto pour les suggestions aussi
+    const isTree = culture.category === 'Arbres Fruitiers' || culture.category === 'Petits Fruits';
+
     const newPlot: Plot = {
        id: Math.random().toString(36).substr(2, 9),
        name: `${culture.name}`,
        type: 'culture',
-       shape: 'rect',
+       shape: isTree ? 'circle' : 'rect',
        x: 1, y: 1,
        width: suggestion.suggestedWidth,
        height: suggestion.suggestedHeight,
@@ -210,19 +228,51 @@ const App: React.FC = () => {
 
   const handleAutoPlaceSuggestions = () => {
     const newPlots = [...displayedPlots];
-    suggestions.filter(s => s.selected).forEach(s => {
+    const terrainW = currentGreenhouseId ? 20 : config.terrainWidth;
+    const terrainH = currentGreenhouseId ? 20 : config.terrainHeight;
+
+    const toPlace = suggestions.filter(s => s.selected);
+    
+    // Algorithme de placement simple
+    toPlace.forEach(s => {
         const culture = CULTURES.find(c => c.id === s.cultureId);
-        newPlots.push({
-            id: Math.random().toString(36).substr(2, 9),
-            name: culture?.name || 'Auto',
-            type: 'culture',
-            shape: 'rect',
-            x: 1, y: 1, 
-            width: s.suggestedWidth, height: s.suggestedHeight,
-            exposure: 'Soleil',
-            plantedCultureId: s.cultureId
-        });
+        const isTree = culture?.category === 'Arbres Fruitiers';
+        
+        let placed = false;
+        let x = 1;
+        let y = 1;
+        const step = 0.5;
+
+        // Try to find a spot
+        while (!placed && y + s.suggestedHeight <= terrainH) {
+            const collision = newPlots.some(p => {
+                return (x < p.x + p.width && x + s.suggestedWidth > p.x &&
+                        y < p.y + p.height && y + s.suggestedHeight > p.y);
+            });
+
+            if (!collision) {
+                newPlots.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: culture?.name || 'Auto',
+                    type: 'culture',
+                    shape: isTree ? 'circle' : 'rect',
+                    x: x, y: y, 
+                    width: s.suggestedWidth, height: s.suggestedHeight,
+                    exposure: 'Soleil',
+                    plantedCultureId: s.cultureId,
+                    rowOrientation: 'horizontal'
+                });
+                placed = true;
+            } else {
+                x += step;
+                if (x + s.suggestedWidth > terrainW) {
+                    x = 1;
+                    y += step;
+                }
+            }
+        }
     });
+
     updateDisplayedPlots(newPlots);
     setSuggestions([]);
     setShowSuggestionsPanel(false);
@@ -231,9 +281,10 @@ const App: React.FC = () => {
   const handleAutoGeneratePlan = async () => {
     setIsAnalyzing(true);
     setSuggestions([]); 
-    setShowSuggestionsPanel(true); // Force open panel immediately
+    setShowSuggestionsPanel(true);
 
-    await new Promise(resolve => setTimeout(resolve, 600));
+    // Suppression du délai artificiel long
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     const newSuggestions = generateMissingSuggestions(plots, config.peopleCount, config.sufficiencyTarget);
     
@@ -252,8 +303,6 @@ const App: React.FC = () => {
       if (culture) {
           setSelectedCulture(culture);
           setSelectedPlot(null);
-          // Si on est dans l'onglet vivier, on peut soit rester, soit basculer. 
-          // Ici on reste dans l'onglet actuel mais on ouvre le panneau latéral qui est 'global'
       }
   };
 
@@ -261,11 +310,11 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-white p-8 overflow-auto">
         <div className="max-w-4xl mx-auto space-y-8 print:w-full print:max-w-none">
-          <div className="flex justify-between items-start border-b-2 border-stone-900 pb-4 print:hidden">
-             <h1 className="text-2xl font-black font-mono">Aperçu Impression</h1>
+          <div className="flex justify-between items-start border-b-2 border-[#5D4037] pb-4 print:hidden">
+             <h1 className="text-2xl font-black font-mono text-[#5D4037]">Aperçu Impression</h1>
              <div className="flex gap-4">
-               <button onClick={() => window.print()} className="bg-emerald-500 border-2 border-stone-900 text-stone-900 px-6 py-2 font-black shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Lancer Impression</button>
-               <button onClick={() => setIsPrintPreview(false)} className="bg-white border-2 border-stone-900 text-stone-900 px-6 py-2 font-black shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Retour</button>
+               <button onClick={() => window.print()} className="bg-emerald-500 border-2 border-[#5D4037] text-white px-6 py-2 font-black shadow-[4px_4px_0px_0px_#8D6E63] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Lancer Impression</button>
+               <button onClick={() => setIsPrintPreview(false)} className="bg-white border-2 border-[#5D4037] text-[#5D4037] px-6 py-2 font-black shadow-[4px_4px_0px_0px_#8D6E63] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Retour</button>
              </div>
           </div>
           <GardenMap 
@@ -288,26 +337,25 @@ const App: React.FC = () => {
 
   const isMultiSelectionMode = multiSelectedIds.length > 0;
   const hasSuggestions = suggestions.length > 0;
-  // Le panneau s'affiche si : des suggestions existent, OU on est en mode sélection, OU le panneau est forcé (ex: chargement calcul)
   const showBottomPanel = hasSuggestions || isMultiSelectionMode || showSuggestionsPanel;
 
   return (
     <>
       {showIntro ? (
-        <div className="fixed inset-0 bg-[#8B4513] z-[100] overflow-hidden flex items-center justify-center">
-           <div className="w-full h-full bg-[#5D4037] absolute top-0 left-0 intro-container flex items-center justify-center">
-              <div className="absolute inset-0 opacity-30" style={{
-                 background: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0,0,0,0.4) 40px, rgba(0,0,0,0.4) 80px)',
-                 animation: 'furrowScroll 2s linear infinite'
+        <div className="fixed inset-0 bg-[#5D4037] z-[100] overflow-hidden flex items-center justify-center">
+           <div className="w-full h-full bg-[#3E2723] absolute top-0 left-0 intro-container flex items-center justify-center">
+              <div className="absolute inset-0 opacity-40" style={{
+                 background: 'repeating-linear-gradient(45deg, #1B5E20 0px, #1B5E20 20px, #33691E 20px, #33691E 40px)',
+                 animation: 'furrowScroll 3s linear infinite'
               }}></div>
-              <div className="text-center relative z-10 transform -rotate-x-12">
-                 <h1 className="text-6xl md:text-9xl font-black text-white tracking-tighter drop-shadow-[10px_10px_0px_rgba(0,0,0,0.5)]">GÉOPOTAGER</h1>
-                 <p className="text-xl md:text-2xl font-mono text-orange-400 font-bold mt-4 tracking-[0.5em] bg-stone-900 inline-block px-4 py-1">CHARGEMENT DU TERRAIN...</p>
+              <div className="text-center relative z-10 p-12 border-8 border-[#8D6E63] bg-[#5D4037] shadow-[10px_10px_0px_rgba(0,0,0,0.3)]">
+                 <h1 className="text-6xl md:text-9xl font-black text-[#D7CCC8] tracking-tighter drop-shadow-[4px_4px_0px_#271c19]">GÉOPOTAGER</h1>
+                 <p className="text-xl md:text-2xl font-mono text-[#A5D6A7] font-bold mt-4 tracking-[0.5em] bg-[#271c19] inline-block px-4 py-2 uppercase">Intelligence Vivrière</p>
               </div>
            </div>
         </div>
       ) : (
-        <div className="flex h-screen bg-[#fcfbf7] overflow-hidden font-sans selection:bg-yellow-300 selection:text-stone-900 w-full animate-in fade-in duration-1000">
+        <div className="flex h-screen bg-[#D7CCC8] overflow-hidden font-sans selection:bg-[#A1887F] selection:text-white w-full animate-in fade-in duration-500">
           <Sidebar 
             selectedCulture={selectedCulture} 
             onSelectCulture={handleSelectCulture}
@@ -339,13 +387,13 @@ const App: React.FC = () => {
                   <div className="flex-1 p-6 flex flex-col gap-6 h-full relative z-0 overflow-hidden">
                     <div className="flex-1 relative h-full flex flex-col gap-4">
 
-                      <div className="flex-1 relative min-h-0 border-4 border-stone-900 shadow-[8px_8px_0px_0px_rgba(28,25,23,1)]">
+                      <div className="flex-1 relative min-h-0 border-4 border-[#8D6E63] shadow-[6px_6px_0px_0px_rgba(93,64,55,0.4)] bg-[#EFEBE9]">
                         {currentGreenhouseId && (
-                            <div className="absolute top-0 left-0 right-0 bg-cyan-600 text-white z-50 p-2 flex justify-between items-center shadow-md">
-                                <span className="font-black uppercase text-sm ml-4"><i className="fa-solid fa-house-chimney-window"></i> Intérieur Serre</span>
+                            <div className="absolute top-0 left-0 right-0 bg-[#795548] text-white z-50 p-2 flex justify-between items-center shadow-md">
+                                <span className="font-black uppercase text-sm ml-4"><i className="fa-solid fa-house-chimney-window"></i> Intérieur</span>
                                 <button 
                                     onClick={() => { setCurrentGreenhouseId(null); setSelectedPlot(null); }}
-                                    className="bg-white text-stone-900 px-4 py-1 text-xs font-black uppercase border-2 border-stone-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
+                                    className="bg-white text-[#3E2723] px-4 py-1 text-xs font-black uppercase border-2 border-[#3E2723] shadow-[2px_2px_0px_0px_#3E2723] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
                                 >
                                     Sortir
                                 </button>
@@ -353,6 +401,7 @@ const App: React.FC = () => {
                         )}
 
                         <GardenMap 
+                          key={currentGreenhouseId || 'main-map'} 
                           plots={displayedPlots} 
                           onSelectPlot={handleSelectPlot} 
                           onUpdatePlot={handleUpdatePlot}
@@ -374,7 +423,7 @@ const App: React.FC = () => {
                         {!currentGreenhouseId && (
                             <button 
                             onClick={handleAutoGeneratePlan}
-                            className="absolute top-4 left-4 bg-white text-stone-900 px-4 py-2.5 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] border-2 border-stone-900 flex items-center gap-3 hover:bg-yellow-50 transition-all font-black text-[10px] z-20 uppercase hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                            className="absolute top-4 left-4 bg-white text-[#3E2723] px-4 py-2.5 shadow-[4px_4px_0px_0px_#5D4037] border-2 border-[#5D4037] flex items-center gap-3 hover:bg-[#D7CCC8] transition-all font-black text-[10px] z-20 uppercase hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
                             >
                             <i className={`fa-solid ${isAnalyzing ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
                             {isAnalyzing ? 'CALCUL...' : 'PLANIFIER'}
@@ -382,9 +431,9 @@ const App: React.FC = () => {
                         )}
 
                         {aiAnalysis && (
-                          <div className="absolute top-20 left-4 bg-emerald-500 border-2 border-stone-900 text-stone-900 px-6 py-4 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] z-50 animate-in fade-in slide-in-from-top-4 max-w-md">
+                          <div className="absolute top-20 left-4 bg-[#3E2723] border-2 border-[#A1887F] text-white px-6 py-4 shadow-[4px_4px_0px_0px_#1B1B1B] z-50 animate-in fade-in slide-in-from-top-4 max-w-md">
                             <div className="flex items-center gap-3">
-                              <i className="fa-solid fa-check-circle text-stone-900 text-xl"></i>
+                              <i className="fa-solid fa-check-circle text-lime-400 text-xl"></i>
                               <p className="text-sm font-black">{aiAnalysis}</p>
                             </div>
                           </div>
@@ -393,20 +442,20 @@ const App: React.FC = () => {
 
                       {/* --- PANEL DU BAS (Sélection ou Suggestions) --- */}
                       {showBottomPanel && (
-                        <div className="h-48 shrink-0 bg-[#fffdf5] border-t-4 border-stone-900 z-10 flex flex-col animate-in slide-in-from-bottom-10 shadow-[-4px_-4px_10px_rgba(0,0,0,0.1)]">
+                        <div className="h-48 shrink-0 bg-[#D7CCC8] border-t-4 border-[#5D4037] z-10 flex flex-col animate-in slide-in-from-bottom-10 shadow-[0px_-4px_10px_rgba(0,0,0,0.1)]">
                           
                           {/* En-tête du Panneau */}
-                          <div className={`px-6 py-3 border-b-2 border-stone-900 flex justify-between items-center ${isMultiSelectionMode ? 'bg-blue-50' : 'bg-white'}`}>
+                          <div className={`px-6 py-3 border-b-2 border-[#5D4037] flex justify-between items-center ${isMultiSelectionMode ? 'bg-purple-200' : 'bg-[#A1887F]'}`}>
                             <div className="flex items-center gap-4">
                               {isMultiSelectionMode ? (
                                 <>
-                                  <h3 className="font-black text-blue-800 uppercase text-xs tracking-widest flex items-center gap-2">
+                                  <h3 className="font-black text-[#3E2723] uppercase text-xs tracking-widest flex items-center gap-2">
                                       <i className="fa-regular fa-square-check text-lg"></i>
                                       Sélection Multiple ({multiSelectedIds.length})
                                   </h3>
                                   <button 
                                     onClick={handleBulkDelete}
-                                    className="bg-red-500 border-2 border-stone-900 text-white px-4 py-2 text-xs font-black hover:bg-red-600 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                    className="bg-red-500 border-2 border-[#3E2723] text-white px-4 py-2 text-xs font-black hover:bg-red-600 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_#3E2723] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
                                   >
                                     <i className="fa-solid fa-trash"></i>
                                     TOUT SUPPRIMER
@@ -414,14 +463,14 @@ const App: React.FC = () => {
                                 </>
                               ) : (
                                 <>
-                                  <h3 className="font-black text-stone-900 uppercase text-xs tracking-widest flex items-center gap-2">
-                                      <i className="fa-solid fa-lightbulb text-yellow-500"></i>
+                                  <h3 className="font-black text-white uppercase text-xs tracking-widest flex items-center gap-2">
+                                      <i className="fa-solid fa-lightbulb"></i>
                                       {hasSuggestions ? `Cultures Manquantes (${suggestions.length})` : "Analyse Terminée"}
                                   </h3>
                                   {hasSuggestions && (
                                     <button 
                                       onClick={handleAutoPlaceSuggestions}
-                                      className="bg-emerald-400 border-2 border-stone-900 text-stone-900 px-3 py-1 text-xs font-black hover:bg-emerald-300 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                      className="bg-lime-400 border-2 border-[#3E2723] text-[#3E2723] px-3 py-1 text-xs font-black hover:bg-lime-300 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_#3E2723] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
                                     >
                                       <i className="fa-solid fa-wand-magic-sparkles"></i>
                                       PLACER SÉLECTION ({suggestions.filter(s => s.selected).length})
@@ -430,7 +479,7 @@ const App: React.FC = () => {
                                 </>
                               )}
                             </div>
-                            <button onClick={() => { setSuggestions([]); setMultiSelectedIds([]); setShowSuggestionsPanel(false); }} className="text-stone-900 hover:text-red-500 text-xs font-bold uppercase flex items-center gap-1">
+                            <button onClick={() => { setSuggestions([]); setMultiSelectedIds([]); setShowSuggestionsPanel(false); }} className="text-[#3E2723] hover:text-red-600 text-xs font-bold uppercase flex items-center gap-1">
                                 <i className="fa-solid fa-times"></i> Fermer
                             </button>
                           </div>
@@ -440,8 +489,8 @@ const App: React.FC = () => {
                             
                             {/* CAS 0 : Pas de suggestions (Tout est bon) */}
                             {!isMultiSelectionMode && !hasSuggestions && (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-stone-500 opacity-80">
-                                    <i className="fa-solid fa-check-circle text-4xl text-emerald-500 mb-2"></i>
+                                <div className="w-full h-full flex flex-col items-center justify-center text-[#5D4037]/60">
+                                    <i className="fa-solid fa-check-circle text-4xl text-[#5D4037] mb-2"></i>
                                     <p className="text-sm font-bold uppercase">Votre plan répond à vos objectifs !</p>
                                     <p className="text-xs">Aucune culture supplémentaire nécessaire.</p>
                                 </div>
@@ -453,24 +502,24 @@ const App: React.FC = () => {
                               if(!p) return null;
                               const cult = CULTURES.find(c => c.id === p.plantedCultureId);
                               return (
-                                <div key={id} className="shrink-0 w-48 bg-blue-100 border-2 border-stone-900 p-3 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] flex flex-col gap-2 relative group hover:bg-red-50 transition-colors">
+                                <div key={id} className="shrink-0 w-48 bg-purple-100 border-2 border-[#5D4037] p-3 shadow-[4px_4px_0px_0px_#5D4037] flex flex-col gap-2 relative group hover:bg-red-100 transition-colors">
                                     <div className="flex items-center gap-3">
                                       {cult ? (
-                                        <div className="w-10 h-10 bg-white border-2 border-stone-900 flex items-center justify-center shrink-0">
+                                        <div className="w-10 h-10 bg-white border-2 border-[#5D4037] flex items-center justify-center shrink-0">
                                           <img src={cult.image} className="w-8 h-8 object-contain" />
                                         </div>
                                       ) : (
-                                        <div className="w-10 h-10 bg-stone-200 border-2 border-stone-900 flex items-center justify-center"><i className="fa-solid fa-cube text-stone-400"></i></div>
+                                        <div className="w-10 h-10 bg-gray-200 border-2 border-[#5D4037] flex items-center justify-center"><i className="fa-solid fa-cube text-gray-400"></i></div>
                                       )}
                                       <div className="overflow-hidden">
-                                        <h4 className="font-black text-stone-900 text-xs leading-none truncate uppercase" title={p.name}>{p.name}</h4>
-                                        <span className="text-[10px] font-bold text-stone-600 block mt-1">{p.width}m x {p.height}m</span>
+                                        <h4 className="font-black text-[#3E2723] text-xs leading-none truncate uppercase" title={p.name}>{p.name}</h4>
+                                        <span className="text-[10px] font-bold text-gray-600 block mt-1">{p.width}m x {p.height}m</span>
                                       </div>
                                     </div>
                                     {/* Bouton de suppression individuel au survol */}
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); handleIndividualDelete(id); }}
-                                        className="absolute top-2 right-2 text-stone-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                        className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                                         title="Supprimer cet élément"
                                     >
                                         <i className="fa-solid fa-trash"></i>
@@ -486,24 +535,24 @@ const App: React.FC = () => {
                               return (
                                 <div 
                                   key={idx} 
-                                  className={`shrink-0 w-64 bg-white border-2 border-stone-900 p-3 shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] transition-all flex flex-col gap-2 relative group cursor-pointer hover:bg-yellow-50 hover:translate-x-[-1px] hover:translate-y-[-1px] ${sug.selected ? 'ring-2 ring-emerald-500' : ''}`}
+                                  className={`shrink-0 w-64 bg-white border-2 border-[#5D4037] p-3 shadow-[4px_4px_0px_0px_#5D4037] transition-all flex flex-col gap-2 relative group cursor-pointer hover:bg-lime-50 hover:translate-x-[-1px] hover:translate-y-[-1px] ${sug.selected ? 'ring-2 ring-lime-500' : ''}`}
                                   onClick={() => toggleSuggestionSelection(sug.cultureId)}
                                 >
                                     <div className="absolute top-2 right-2">
-                                      {sug.selected ? <i className="fa-solid fa-square-check text-emerald-600 text-lg"></i> : <i className="fa-regular fa-square text-stone-300 text-lg"></i>}
+                                      {sug.selected ? <i className="fa-solid fa-square-check text-lime-600 text-lg"></i> : <i className="fa-regular fa-square text-gray-300 text-lg"></i>}
                                     </div>
                                     <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 bg-stone-100 border-2 border-stone-900 flex items-center justify-center shrink-0">
+                                      <div className="w-10 h-10 bg-gray-100 border-2 border-[#5D4037] flex items-center justify-center shrink-0">
                                         <img src={cult.image} className="w-8 h-8 object-contain" />
                                       </div>
                                       <div>
-                                        <h4 className="font-black text-stone-900 text-sm leading-none uppercase">{cult.name}</h4>
-                                        <span className="text-[10px] font-bold text-red-500 bg-red-100 px-1 border border-stone-900 mt-1 inline-block">Manque {sug.missingPlants} plants</span>
+                                        <h4 className="font-black text-[#3E2723] text-sm leading-none uppercase">{cult.name}</h4>
+                                        <span className="text-[10px] font-bold text-red-500 bg-red-100 px-1 border border-[#5D4037] mt-1 inline-block">Manque {sug.missingPlants} plants</span>
                                       </div>
                                     </div>
-                                    <div className="bg-stone-100 border border-stone-900 p-2 text-[10px] text-stone-600 flex justify-between mt-1">
+                                    <div className="bg-gray-100 border border-[#5D4037] p-2 text-[10px] text-gray-600 flex justify-between mt-1">
                                       <span className="font-bold">Suggéré:</span>
-                                      <span className="font-black text-stone-900">{sug.suggestedWidth}m x {sug.suggestedHeight}m</span>
+                                      <span className="font-black text-[#3E2723]">{sug.suggestedWidth}m x {sug.suggestedHeight}m</span>
                                     </div>
                                 </div>
                               )
@@ -513,49 +562,49 @@ const App: React.FC = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Overlay Panel (Détails Culture ou Editeur Parcelle) */}
-                  <div 
-                    className={`fixed inset-y-0 right-0 z-[60] transform transition-transform duration-500 ease-in-out shadow-2xl ${
-                      selectedCulture || selectedPlot ? 'translate-x-0' : 'translate-x-full'
-                    }`}
-                  >
-                    <div className="h-full bg-white flex flex-col border-l-4 border-stone-900 w-[450px] max-w-[90vw] shadow-[ -10px_0px_20px_rgba(0,0,0,0.1)]">
-                      {selectedCulture && (
-                        <CultureDetails 
-                          culture={selectedCulture} 
-                          config={config}
-                          onClose={() => setSelectedCulture(null)}
-                          onAddToPlan={handleAddCultureFromDetails}
-                        />
-                      )}
-                      {selectedPlot && (
-                        <PlotEditor 
-                          plot={selectedPlot} 
-                          config={config} 
-                          onUpdate={handleUpdatePlot}
-                          onDelete={handleDeletePlot}
-                          onAddPlot={handleAddPlot}
-                          onClose={() => setSelectedPlot(null)}
-                        />
-                      )}
-                    </div>
-                  </div>
                 </div>
               )}
 
               {currentTab === 'calendar' && (
-                <div className="h-full w-full overflow-y-auto bg-[#fffdf5]">
+                <div className="h-full w-full overflow-y-auto bg-white">
                   <GlobalCalendar />
                 </div>
               )}
 
               {currentTab === 'sufficiency' && (
-                <div className="h-full w-full overflow-hidden">
+                <div className="h-full w-full overflow-hidden bg-[#EFEBE9]">
                   <AutosufficiencyTab config={config} onConfigChange={setConfig} plots={plots} onRequestPlanning={handleRequestPlanningFromVivier} onOpenCultureDetails={handleOpenCultureDetails} />
                 </div>
               )}
             </main>
+
+            {/* Overlay Panel (Détails Culture ou Editeur Parcelle) - MOVED HERE FOR GLOBAL ACCESS */}
+            <div 
+              className={`fixed inset-y-0 right-0 z-[60] transform transition-transform duration-300 ease-out shadow-2xl ${
+                selectedCulture || selectedPlot ? 'translate-x-0' : 'translate-x-full'
+              }`}
+            >
+              <div className="h-full bg-white flex flex-col border-l-4 border-[#3E2723] w-[450px] max-w-[90vw] shadow-[-10px_0px_20px_rgba(0,0,0,0.1)]">
+                {selectedCulture && (
+                  <CultureDetails 
+                    culture={selectedCulture} 
+                    config={config}
+                    onClose={() => setSelectedCulture(null)}
+                    onAddToPlan={handleAddCultureFromDetails}
+                  />
+                )}
+                {selectedPlot && (
+                  <PlotEditor 
+                    plot={selectedPlot} 
+                    config={config} 
+                    onUpdate={handleUpdatePlot}
+                    onDelete={handleDeletePlot}
+                    onAddPlot={handleAddPlot}
+                    onClose={() => setSelectedPlot(null)}
+                  />
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

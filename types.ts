@@ -60,6 +60,7 @@ export interface Culture {
   };
   planning: Planning;
   rotations: CultureCategory[];
+  successions: number; // Nombre de fois que la culture peut être faite sur une saison (ex: radis = 4, tomates = 1)
 }
 
 export interface Plot {
@@ -78,6 +79,7 @@ export interface Plot {
   plantedCultureId?: string;
   selectedVariety?: string; // Garde le nom de la variété sélectionnée
   customImage?: string;
+  rowOrientation?: 'horizontal' | 'vertical'; // Orientation for culture rows
   // Spécifique Serre
   subPlots?: Plot[]; // Pour le plan intérieur de la serre
   // Spécifique Poulailler

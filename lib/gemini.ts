@@ -6,7 +6,7 @@ import { CULTURES } from '../constants';
 // --- SYSTEME EXPERT LOCAL (Sans appel API) ---
 
 // Détermine le climat approximatif basé sur une string (très basique pour l'exemple)
-export const getClimate = (location: string): 'oceanic' | 'mediterranean' | 'continental' | 'mountain' => {
+export const getClimate = (location: string): 'oceanic' | 'mediterranean' | 'continental' | 'mountain' | 'cold_continental' => {
   if(!location) return 'oceanic';
   for (const [key, value] of Object.entries(CLIMATES)) {
     if (location.toLowerCase().includes(key.toLowerCase())) return value as any;
@@ -31,11 +31,14 @@ export const getVarietiesForLocation = async (cultureName: string, location: str
       else if(cultureName.toLowerCase().includes('haricot')) dbKey = 'Haricots';
   }
 
-  if (dbKey) {
+  if (dbKey && VARIETIES_DB[dbKey]) {
       const varietiesByCulture = VARIETIES_DB[dbKey];
       // Essayer le climat spécifique, sinon 'all', sinon le premier dispo
-      const varieties = varietiesByCulture[climate] || varietiesByCulture['all'] || Object.values(varietiesByCulture)[0];
-      if (varieties && varieties.length > 0) return varieties;
+      // Protection supplémentaire si jamais la structure est incomplète
+      if (varietiesByCulture) {
+          const varieties = varietiesByCulture[climate] || varietiesByCulture['all'] || Object.values(varietiesByCulture)[0];
+          if (varieties && varieties.length > 0) return varieties;
+      }
   }
 
   // Fallback ultime générique

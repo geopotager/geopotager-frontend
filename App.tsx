@@ -219,19 +219,50 @@ const App: React.FC = () => {
 
   const handleAutoPlaceSuggestions = () => {
     const newPlots = [...displayedPlots];
-    suggestions.filter(s => s.selected).forEach(s => {
+    const terrainW = currentGreenhouseId ? 20 : config.terrainWidth;
+    const terrainH = currentGreenhouseId ? 20 : config.terrainHeight;
+
+    const toPlace = suggestions.filter(s => s.selected);
+    
+    // Very simple placement algorithm (Scan from top-left)
+    toPlace.forEach(s => {
         const culture = CULTURES.find(c => c.id === s.cultureId);
-        newPlots.push({
-            id: Math.random().toString(36).substr(2, 9),
-            name: culture?.name || 'Auto',
-            type: 'culture',
-            shape: 'rect',
-            x: 1, y: 1, 
-            width: s.suggestedWidth, height: s.suggestedHeight,
-            exposure: 'Soleil',
-            plantedCultureId: s.cultureId
-        });
+        let placed = false;
+        let x = 1;
+        let y = 1;
+        const step = 0.5;
+
+        // Try to find a spot
+        while (!placed && y + s.suggestedHeight <= terrainH) {
+            // Check collision with existing newPlots
+            const collision = newPlots.some(p => {
+                return (x < p.x + p.width && x + s.suggestedWidth > p.x &&
+                        y < p.y + p.height && y + s.suggestedHeight > p.y);
+            });
+
+            if (!collision) {
+                newPlots.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: culture?.name || 'Auto',
+                    type: 'culture',
+                    shape: 'rect',
+                    x: x, y: y, 
+                    width: s.suggestedWidth, height: s.suggestedHeight,
+                    exposure: 'Soleil',
+                    plantedCultureId: s.cultureId,
+                    rowOrientation: 'horizontal'
+                });
+                placed = true;
+            } else {
+                x += step;
+                if (x + s.suggestedWidth > terrainW) {
+                    x = 1;
+                    y += step;
+                }
+            }
+        }
     });
+
     updateDisplayedPlots(newPlots);
     setSuggestions([]);
     setShowSuggestionsPanel(false);
@@ -348,7 +379,7 @@ const App: React.FC = () => {
                       <div className="flex-1 relative min-h-0 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white">
                         {currentGreenhouseId && (
                             <div className="absolute top-0 left-0 right-0 bg-purple-500 text-white z-50 p-2 flex justify-between items-center shadow-md">
-                                <span className="font-black uppercase text-sm ml-4"><i className="fa-solid fa-house-chimney-window"></i> Intérieur Serre</span>
+                                <span className="font-black uppercase text-sm ml-4"><i className="fa-solid fa-house-chimney-window"></i> Intérieur</span>
                                 <button 
                                     onClick={() => { setCurrentGreenhouseId(null); setSelectedPlot(null); }}
                                     className="bg-white text-black px-4 py-1 text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
@@ -359,6 +390,7 @@ const App: React.FC = () => {
                         )}
 
                         <GardenMap 
+                          key={currentGreenhouseId || 'main-map'} 
                           plots={displayedPlots} 
                           onSelectPlot={handleSelectPlot} 
                           onUpdatePlot={handleUpdatePlot}
