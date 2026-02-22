@@ -62,6 +62,32 @@
         width: 12px;
         height: 40px;
       }
+
+      /* STYLES IMPRESSION */
+      @media print {
+        @page {
+          size: landscape;
+          margin: 0.5cm;
+        }
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          background-color: white !important;
+        }
+        /* Masquer les éléments interactifs inutiles */
+        .no-print {
+            display: none !important;
+        }
+        /* Forcer l'affichage des backgrounds */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        /* Éviter les coupures au milieu d'une fiche culture */
+        .break-inside-avoid {
+            page-break-inside: avoid;
+        }
+      }
     </style>
 <script type="importmap">
 {

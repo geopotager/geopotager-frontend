@@ -298,10 +298,10 @@ const App: React.FC = () => {
       await handleAutoGeneratePlan();
   };
 
-  const handleOpenCultureDetails = (cultureId: string) => {
-      const culture = CULTURES.find(c => c.id === cultureId);
-      if (culture) {
-          setSelectedCulture(culture);
+  const handleOpenCultureDetails = (cultureId: string | Culture) => {
+      const c = typeof cultureId === 'string' ? CULTURES.find(cul => cul.id === cultureId) : cultureId;
+      if (c) {
+          setSelectedCulture(c);
           setSelectedPlot(null);
       }
   };
@@ -567,7 +567,7 @@ const App: React.FC = () => {
 
               {currentTab === 'calendar' && (
                 <div className="h-full w-full overflow-y-auto bg-white">
-                  <GlobalCalendar />
+                  <GlobalCalendar onSelectCulture={handleOpenCultureDetails} />
                 </div>
               )}
 
@@ -580,7 +580,7 @@ const App: React.FC = () => {
 
             {/* Overlay Panel (Détails Culture ou Editeur Parcelle) - MOVED HERE FOR GLOBAL ACCESS */}
             <div 
-              className={`fixed inset-y-0 right-0 z-[60] transform transition-transform duration-300 ease-out shadow-2xl ${
+              className={`fixed inset-y-0 right-0 z-[60] transform transition-transform duration-300 ease-out shadow-2xl print:hidden ${
                 selectedCulture || selectedPlot ? 'translate-x-0' : 'translate-x-full'
               }`}
             >

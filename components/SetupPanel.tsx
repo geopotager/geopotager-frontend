@@ -51,7 +51,7 @@ const SetupPanel: React.FC<SetupPanelProps> = ({
   };
 
   return (
-    <div className="w-full bg-white border-b-4 border-black p-2 flex flex-col xl:flex-row gap-3 items-start xl:items-stretch shadow-[0px_4px_0px_rgba(0,0,0,0.1)] z-40 relative">
+    <div className="w-full bg-white border-b-4 border-black p-2 flex flex-col xl:flex-row gap-3 items-start xl:items-stretch shadow-[0px_4px_0px_rgba(0,0,0,0.1)] z-40 relative print:hidden">
       
       {/* BLOC 1 : IDENTITÉ DU JARDIN (Jaune) */}
       <div className="flex-1 flex flex-col md:flex-row gap-3 w-full">
