@@ -1,9 +1,7 @@
-
 import { Culture, Plot, CultureCategory } from './types';
-
+export const API_URL = "http://localhost:3001";
 export const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jui', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 export const MONTHS_SHORT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-
 export const CATEGORY_COLORS: Record<CultureCategory, string> = {
   'Fruits': 'bg-red-400',
   'Racines': 'bg-yellow-400',
@@ -45,7 +43,7 @@ export const CULTURES: Culture[] = [
     growingMethods: 'Tuteurage.',
     soilCoverage: 'Faible au sol.',
     associations: ['Basilic', 'Œillet d\'Inde', 'Carottes'],
-    plantsPerPerson: 15, 
+    plantsPerPerson: 15,
     spacingCm: { betweenPlants: 60, betweenRows: 80 },
     rotations: ['Racines'],
     diseases: [{ name: 'Mildiou', solution: 'Abri, purin de prêle.' }],
@@ -161,7 +159,7 @@ export const CULTURES: Culture[] = [
       { name: 'Blanc', description: 'Goût d\'artichaut.', advantage: 'Buissonnant', waterNeedLevel: 2 }
     ],
     description: 'Courge d\'été en forme de soucoupe volante.',
-    image: 'https://em-content.zobj.net/source/microsoft-teams/337/flying-saucer_1f6f8.png', 
+    image: 'https://em-content.zobj.net/source/microsoft-teams/337/flying-saucer_1f6f8.png',
     exposure: 'Soleil',
     waterNeeds: 'Élevé',
     watering: { frequency: '2x / semaine', volumePerPlant: 4 },
@@ -238,7 +236,7 @@ export const CULTURES: Culture[] = [
       { name: 'Crapaudine', description: 'Allongée rugueuse.', advantage: 'Saveur sucrée', waterNeedLevel: 2 }
     ],
     description: 'Racine douce et feuilles comestibles.',
-    image: `https://em-content.zobj.net/source/microsoft-teams/337/beetle_1fab2.png`, 
+    image: `https://em-content.zobj.net/source/microsoft-teams/337/beetle_1fab2.png`,
     exposure: 'Soleil',
     waterNeeds: 'Moyen',
     watering: { frequency: '1x / semaine', volumePerPlant: 0.5 },
@@ -360,7 +358,7 @@ export const CULTURES: Culture[] = [
     rotations: ['Racines'],
     diseases: [{ name: 'Limaces', solution: 'Ferramol.' }],
     planning: { sowing: [3, 4, 5, 6, 7, 8], planting: [4, 5, 6, 7, 8, 9], maintenance: [5, 6, 7, 8, 9], harvest: [5, 6, 7, 8, 9, 10] },
-    successions: 4 
+    successions: 4
   },
   {
     id: 'epinards',
@@ -370,7 +368,7 @@ export const CULTURES: Culture[] = [
       { name: 'Géant d\'Hiver', description: 'Grandes feuilles.', advantage: 'Rustique', waterNeedLevel: 2 }
     ],
     description: 'Riche en fer, culture de mi-saison.',
-    image: `${ICON_BASE}/Food/Leafy%20Green.png`, 
+    image: `${ICON_BASE}/Food/Leafy%20Green.png`,
     exposure: 'Mi-ombre',
     waterNeeds: 'Moyen',
     watering: { frequency: '2x / semaine', volumePerPlant: 0.5 },
@@ -420,7 +418,7 @@ export const CULTURES: Culture[] = [
       { name: 'Sanda', description: 'Tardif.', advantage: 'Résistant froid', waterNeedLevel: 2 }
     ],
     description: 'Récolte d\'hiver le long de la tige.',
-    image: `${MS_EMOJI_BASE}/leafy-green_1f96c.png`, 
+    image: `${MS_EMOJI_BASE}/leafy-green_1f96c.png`,
     exposure: 'Soleil',
     waterNeeds: 'Moyen',
     watering: { frequency: '1x / semaine', volumePerPlant: 2 },
@@ -472,7 +470,7 @@ export const CULTURES: Culture[] = [
       { name: 'Fortex', description: 'Rames.', advantage: 'Longue récolte', waterNeedLevel: 2 }
     ],
     description: 'Azote pour le sol, protéines pour vous.',
-    image: `${ICON_BASE}/Food/Peanuts.png`, 
+    image: `${ICON_BASE}/Food/Peanuts.png`,
     exposure: 'Soleil',
     waterNeeds: 'Moyen',
     watering: { frequency: '1x / semaine', volumePerPlant: 1 },
@@ -497,7 +495,7 @@ export const CULTURES: Culture[] = [
       { name: 'Téléphone', description: 'Rames.', advantage: 'Productif', waterNeedLevel: 2 }
     ],
     description: 'Délice du printemps.',
-    image: `${ICON_BASE}/Food/Pea%20Pod.png`, 
+    image: `${ICON_BASE}/Food/Pea%20Pod.png`,
     exposure: 'Mi-ombre',
     waterNeeds: 'Moyen',
     watering: { frequency: '1x / semaine', volumePerPlant: 1 },
@@ -548,7 +546,7 @@ export const CULTURES: Culture[] = [
       { name: 'Victoria', description: 'Tiges vertes/rouges.', advantage: 'Vigoureuse', waterNeedLevel: 2 }
     ],
     description: 'Indestructible une fois installée. Attention feuilles toxiques.',
-    image: `https://em-content.zobj.net/source/microsoft-teams/337/leafy-green_1f96c.png`, 
+    image: `https://em-content.zobj.net/source/microsoft-teams/337/leafy-green_1f96c.png`,
     exposure: 'Mi-ombre',
     waterNeeds: 'Élevé',
     watering: { frequency: '2x / semaine', volumePerPlant: 5 },
@@ -734,11 +732,33 @@ export const CULTURES: Culture[] = [
   }
 ];
 
-export const INITIAL_PLOTS: Plot[] = [
-  { id: '1', name: 'Tomates', type: 'culture', shape: 'rect', x: 2, y: 2, width: 5, height: 1.2, rotation: 0, opacity: 1, exposure: 'Soleil', plantedCultureId: 'tomates', selectedVariety: 'Cœur de Bœuf', rowOrientation: 'horizontal' },
-  { id: '2', name: 'Pommes de Terre', type: 'culture', shape: 'rect', x: 2, y: 4, width: 4, height: 2, rotation: 0, opacity: 1, exposure: 'Soleil', plantedCultureId: 'pdt', selectedVariety: 'Charlotte', rowOrientation: 'vertical' },
-  { id: '3', name: 'Grand Chêne', type: 'tree', shape: 'circle', x: 10, y: 2, width: 3, height: 3, rotation: 0, opacity: 0.8, exposure: 'Soleil' },
-  { id: '4', name: 'Poulailler', type: 'coop', shape: 'rect', x: 12, y: 7, width: 2, height: 1.5, rotation: 0, opacity: 1, exposure: 'Mi-ombre', chickenCount: 3 },
-  { id: '5', name: 'Citerne Pluie', type: 'water_tank', shape: 'circle', x: 13, y: 6, width: 1, height: 1, rotation: 0, opacity: 1, exposure: 'Ombre' },
-  { id: '6', name: 'Serre', type: 'greenhouse', shape: 'rect', x: 1, y: 7, width: 4, height: 3, rotation: 0, opacity: 0.9, exposure: 'Soleil', subPlots: [] }
+export const DEMO_PLOTS: Plot[] = [
+  {
+    id: "demo-1",
+    name: "Tomates",
+    x: 2,
+    y: 2,
+    width: 4,
+    height: 2,
+    rotation: 0,
+    opacity: 0.9,
+    shape: "rect",
+    type: "culture",
+    exposure: "Soleil",
+    plantedCultureId: "tomato"
+  },
+  {
+    id: "demo-2",
+    name: "Serre",
+    x: 10,
+    y: 4,
+    width: 3,
+    height: 2,
+    rotation: 0,
+    opacity: 0.9,
+    shape: "rect",
+    type: "greenhouse",
+    exposure: "Soleil",
+    plantedCultureId: null
+  }
 ];

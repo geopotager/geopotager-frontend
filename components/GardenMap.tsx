@@ -86,7 +86,9 @@ const GardenMap: React.FC<GardenMapProps> = ({
 
   const pixelsPerMeter = 40;
   const mapWidth = isInsideGreenhouse ? 20 : config.terrainWidth; 
-  const mapHeight = isInsideGreenhouse ? 20 : config.terrainHeight; 
+  const mapHeight = isInsideGreenhouse ? 20 : config.terrainHeight;
+  
+  console.log("terrain:", config.terrainWidth, config.terrainHeight);
   const gridWidth = mapWidth * pixelsPerMeter;
   const gridHeight = mapHeight * pixelsPerMeter;
 
