@@ -477,7 +477,7 @@ const PlotEditor: React.FC<PlotEditorProps> = ({ plot, config, onUpdate, onDelet
        <div className="p-6 border-t-2 border-black bg-white">
           <button 
             onClick={() => { onClose(); }}
-            className="w-full bg-lime-400 border-2 border-black text-black py-4 font-black uppercase tracking-widest text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2"
+            className="w-full bg-lime-500 border-2 border-black text-black py-4 font-black uppercase tracking-widest text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2"
           >
             <i className="fa-solid fa-check"></i>
             Valider les Modifications

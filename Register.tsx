@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { register } from "./services/api";
 
 interface RegisterProps {
@@ -28,7 +28,7 @@ const Register: React.FC<RegisterProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-lime-400">
+    <div className="flex flex-col items-center justify-center h-screen bg-purple-600">
       <h2 className="text-2xl font-black mb-6">Créer un compte</h2>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-80">

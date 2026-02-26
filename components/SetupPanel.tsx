@@ -148,7 +148,7 @@ const SetupPanel: React.FC<SetupPanelProps> = ({
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 items-center cursor-pointer group" title="Cliquer pour régler l'objectif">
                <div ref={gaugeRef} onClick={handleGaugeClick} className="w-5 h-16 bg-black border-2 border-stone-600 relative flex flex-col-reverse p-0.5">
-                  <div className="w-full bg-lime-500 group-hover:bg-lime-400 transition-all duration-300" style={{ height: `${config.sufficiencyTarget}%` }}></div>
+                  <div className="w-full bg-lime-500 group-hover:bg-lime-500 transition-all duration-300" style={{ height: `${config.sufficiencyTarget}%` }}></div>
                   {/* Ligne repère score réel */}
                   <div className="absolute w-8 h-0.5 bg-red-500 -left-1.5 transition-all duration-500 border border-black z-10" style={{ bottom: `${sufficiencyScore}%` }}></div>
                </div>

@@ -17,6 +17,7 @@ import Register from "./Register";
 
 const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(true);
+  const [fadeIn, setFadeIn] = useState(false);
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
   const [selectedCulture, setSelectedCulture] = useState<Culture | null>(null);
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
@@ -115,7 +116,20 @@ const App: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowIntro(false), 2000);
+    if (showIntro) {
+      const t = setTimeout(() => {
+        setFadeIn(true);
+      }, 20);
+
+      return () => clearTimeout(t);
+    }
+  }, [showIntro]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowIntro(false);
+    }, 2000);
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -180,6 +194,18 @@ const App: React.FC = () => {
     return Math.min(100, Math.round((totalPlantsOnPlan / totalPlantsNeeded) * 100));
   }, [plots, config.peopleCount, config.sufficiencyTarget]);
 
+  const generateColor = () => {
+    const colors = [
+      "#A3D977",
+      "#F4A261",
+      "#E76F51",
+      "#2A9D8F",
+      "#E9C46A",
+      "#8ECAE6",
+      "#B5838D"
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
 
   const handleSelectCulture = (culture: Culture) => {
     setSelectedCulture(culture);
@@ -230,27 +256,41 @@ const App: React.FC = () => {
   const handleAddPlot = (customPlot?: Plot) => {
     const newPlot: Plot = customPlot || {
       id: Math.random().toString(36).substr(2, 9),
-      name: `Nouvel Élément`, type: 'culture', shape: 'rect',
-      x: 1, y: 1, width: 2, height: 1.2, rotation: 0, opacity: 0.8, exposure: 'Soleil'
+      name: `Nouvel Élément`,
+      type: 'culture',
+      shape: 'rect',
+      x: 1,
+      y: 1,
+      width: 2,
+      height: 1.2,
+      rotation: 0,
+      opacity: 0.8,
+      exposure: 'Soleil',
+      color: generateColor()   // 👈 AJOUT ICI
     };
+
     updateDisplayedPlots([...displayedPlots, newPlot]);
   };
 
   const handleAddCultureFromDetails = (cultureId: string, variety?: string) => {
     const culture = CULTURES.find(c => c.id === cultureId);
+
     const newPlot: Plot = {
       id: Math.random().toString(36).substr(2, 9),
       name: culture ? culture.name : 'Nouvelle Culture',
       type: 'culture',
       shape: 'rect',
-      x: 1, y: 1,
+      x: 1,
+      y: 1,
       width: 2,
       height: 1,
       exposure: 'Soleil',
       plantedCultureId: cultureId,
       selectedVariety: variety,
-      opacity: 0.8
+      opacity: 0.8,
+      color: generateColor()   // 👈 AJOUT ICI
     };
+
     updateDisplayedPlots([...displayedPlots, newPlot]);
     setSelectedCulture(null);
     setSelectedPlot(newPlot);
@@ -318,11 +358,14 @@ const App: React.FC = () => {
             name: culture?.name || 'Auto',
             type: 'culture',
             shape: 'rect',
-            x: x, y: y,
-            width: s.suggestedWidth, height: s.suggestedHeight,
+            x: x,
+            y: y,
+            width: s.suggestedWidth,
+            height: s.suggestedHeight,
             exposure: 'Soleil',
             plantedCultureId: s.cultureId,
-            rowOrientation: 'horizontal'
+            rowOrientation: 'horizontal',
+            color: generateColor()   // 👈 AJOUT ICI
           });
           placed = true;
         } else {
@@ -403,15 +446,28 @@ const App: React.FC = () => {
   return (
     <>
       {showIntro ? (
-        <div className="fixed inset-0 bg-purple-800 z-[100] overflow-hidden flex items-center justify-center">
-          <div className="w-full h-full bg-purple-600 absolute top-0 left-0 intro-container flex items-center justify-center">
-            <div className="absolute inset-0 opacity-30" style={{
-              background: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0,0,0,0.4) 40px, rgba(0,0,0,0.4) 80px)',
-              animation: 'furrowScroll 2s linear infinite'
-            }}></div>
+        <div
+          className={`fixed inset-0 bg-[#3E2723] z-[100] overflow-hidden flex items-center justify-center transition-opacity duration-700 ease-out ${fadeIn ? "opacity-100" : "opacity-0"
+            }`}
+        >
+          <div className="w-full h-full bg-[#5D4037] absolute top-0 left-0 intro-container flex items-center justify-center">
+            <div
+              className="absolute inset-0 opacity-30"
+              style={{
+                background:
+                  'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0,0,0,0.4) 40px, rgba(0,0,0,0.4) 80px)',
+                animation: 'furrowScroll 2s linear infinite'
+              }}
+            ></div>
+
             <div className="text-center relative z-10">
-              <h1 className="text-6xl md:text-9xl font-black text-white tracking-tighter drop-shadow-[10px_10px_0px_rgba(0,0,0,0.5)]">GÉOPOTAGER</h1>
-              <p className="text-xl md:text-2xl font-mono text-lime-300 font-bold mt-4 tracking-[0.5em] bg-black inline-block px-4 py-1">INTELLIGENCE VIVRIÈRE</p>
+              <h1 className="text-6xl md:text-9xl font-black text-white tracking-tighter drop-shadow-[10px_10px_0px_rgba(0,0,0,0.6)]">
+                GÉOPOTAGER
+              </h1>
+
+              <p className="text-xl md:text-2xl font-mono text-[#C8E6C9] font-bold mt-4 tracking-[0.5em] bg-black inline-block px-4 py-1">
+                INTELLIGENCE VIVRIÈRE
+              </p>
             </div>
           </div>
         </div>
@@ -434,7 +490,7 @@ const App: React.FC = () => {
           />
         )
       ) : (
-        <div className="flex h-screen bg-lime-400 overflow-hidden font-sans selection:bg-yellow-300 selection:text-black w-full animate-in fade-in duration-1000">
+        <div className="flex h-screen bg-lime-500 overflow-hidden font-sans selection:bg-yellow-300 selection:text-black w-full transition-opacity duration-700 ease-out animate-[authFade_0.6s_ease-out]">
           <Sidebar
             selectedCulture={selectedCulture}
             onSelectCulture={handleSelectCulture}
@@ -549,7 +605,7 @@ const App: React.FC = () => {
                                   {hasSuggestions && (
                                     <button
                                       onClick={handleAutoPlaceSuggestions}
-                                      className="bg-lime-400 border-2 border-black text-black px-3 py-1 text-xs font-black hover:bg-lime-300 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                      className="bg-lime-500 border-2 border-black text-black px-3 py-1 text-xs font-black hover:bg-lime-300 transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
                                     >
                                       <i className="fa-solid fa-wand-magic-sparkles"></i>
                                       PLACER SÉLECTION ({suggestions.filter(s => s.selected).length})
