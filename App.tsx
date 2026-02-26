@@ -13,7 +13,7 @@ import { Culture, Plot, GardenConfig, PlotSuggestion } from './types';
 import { CULTURES, DEMO_PLOTS } from './constants';
 import { getGardenAnalysis } from './lib/gemini';
 import { generateMissingSuggestions, countExistingPlants, calculateNeeds } from './lib/plantCalculations';
-
+import Register from "./Register";
 
 const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(true);
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [activeGardenId, setActiveGardenId] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Navigation Serre
   const [currentGreenhouseId, setCurrentGreenhouseId] = useState<string | null>(null);
@@ -136,16 +137,16 @@ const App: React.FC = () => {
   }, [plots]);
 
   useEffect(() => {
-  if (!activeGardenId) return;
-  if (!isHydrated) return;
+    if (!activeGardenId) return;
+    if (!isHydrated) return;
 
-  const timeout = setTimeout(() => {
-    updateGarden(activeGardenId, { plots })
-      .catch(err => console.error("Erreur sauvegarde Mongo :", err));
-  }, 500);
+    const timeout = setTimeout(() => {
+      updateGarden(activeGardenId, { plots })
+        .catch(err => console.error("Erreur sauvegarde Mongo :", err));
+    }, 500);
 
-  return () => clearTimeout(timeout);
-}, [plots, activeGardenId, isHydrated]);
+    return () => clearTimeout(timeout);
+  }, [plots, activeGardenId, isHydrated]);
 
   // Logique pour déterminer les plots à afficher (Jardin ou Intérieur Serre)
   const displayedPlots = useMemo(() => {
@@ -415,12 +416,23 @@ const App: React.FC = () => {
           </div>
         </div>
       ) : !token ? (
-        <Login
-          onLoginSuccess={(t: string) => {
-            localStorage.setItem("token", t);
-            setToken(t);
-          }}
-        />
+        isRegistering ? (
+          <Register
+            onRegisterSuccess={(t: string) => {
+              localStorage.setItem("token", t);
+              setToken(t);
+            }}
+            onSwitchToLogin={() => setIsRegistering(false)}
+          />
+        ) : (
+          <Login
+            onLoginSuccess={(t: string) => {
+              localStorage.setItem("token", t);
+              setToken(t);
+            }}
+            onSwitchToRegister={() => setIsRegistering(true)}
+          />
+        )
       ) : (
         <div className="flex h-screen bg-lime-400 overflow-hidden font-sans selection:bg-yellow-300 selection:text-black w-full animate-in fade-in duration-1000">
           <Sidebar

@@ -1,15 +1,16 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { login } from "./services/api";
 
 interface Props {
   onLoginSuccess: (token: string) => void;
+  onSwitchToRegister: () => void;
 }
 
-export default function Login({ onLoginSuccess }: Props) {
+export default function Login({ onLoginSuccess, onSwitchToRegister }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
@@ -51,6 +52,13 @@ export default function Login({ onLoginSuccess }: Props) {
           Se connecter
         </button>
       </form>
+      <button
+        type="button"
+        onClick={onSwitchToRegister}
+        className="text-sm underline font-bold"
+      >
+        Créer un compte
+      </button>
     </div>
   );
 }

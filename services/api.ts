@@ -36,6 +36,22 @@ export async function login(email: string, password: string) {
 
   return response.json();
 }
+export async function register(
+  email: string,
+  password: string,
+  registrationCode: string
+) {
+  const response = await apiFetch("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, password, registrationCode }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Erreur inscription");
+  }
+
+  return response.json();
+}
 
 export async function getGardens() {
   const response = await apiFetch("/api/gardens");
