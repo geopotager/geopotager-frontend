@@ -1,5 +1,5 @@
 import { Culture, Plot, CultureCategory } from './types';
-export const API_URL = "http://localhost:3001";
+export const API_URL = import.meta.env.VITE_API_URL;
 export const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jui', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 export const MONTHS_SHORT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 export const CATEGORY_COLORS: Record<CultureCategory, string> = {
