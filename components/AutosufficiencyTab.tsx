@@ -38,11 +38,9 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
    const totalPlantsOnPlan = CULTURES.reduce((acc, c) => acc + countExistingPlants(plots, c.id), 0);
    const globalCoverage = totalPlantsNeeded > 0 ? Math.min(100, Math.round((totalPlantsOnPlan / totalPlantsNeeded) * 100)) : 0;
 
-   const visibleCultures = CULTURES.filter(c => {
-      const planted = countExistingPlants(plots, c.id);
-      const { neededPlants } = calculateNeeds(c.id, config.peopleCount, config.sufficiencyTarget);
-      return planted > 0 || neededPlants > 0;
-   });
+   const visibleCultures = CULTURES.filter(c =>
+      countExistingPlants(plots, c.id) > 0
+   );
 
    return (
       <div className="h-full bg-[#EFEBE9] overflow-y-auto p-4 md:p-8 space-y-8">
