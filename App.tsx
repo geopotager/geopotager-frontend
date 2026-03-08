@@ -1,7 +1,7 @@
 
 import { getGardens, updateGarden, createGarden } from "./services/api";
 import Login from "./Login";
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import GardenMap from './components/GardenMap';
 import CultureDetails from './components/CultureDetails';
@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
   const [multiSelectedIds, setMultiSelectedIds] = useState<string[]>([]);
   const [currentTab, setCurrentTab] = useState<'garden' | 'calendar' | 'sufficiency'>('garden');
+  const [isDragging, setIsDragging] = useState(false);
   const [isPrintPreview, setIsPrintPreview] = useState(false);
   const [showSunPath, setShowSunPath] = useState(false);
   const [isCalibrating, setIsCalibrating] = useState(false);
@@ -58,6 +59,9 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const plotsRef = useRef<Plot[]>([]);
+  const lastSavedPlotsRef = useRef<string>("")
+
   useEffect(() => {
     if (!token) return;
 
@@ -86,19 +90,31 @@ const App: React.FC = () => {
 
         console.log("Garden actif :", activeGarden);
 
-        const normalizedPlots = (activeGarden.plots || []).map(p => ({
-          ...p,
-          id: p._id,
-          x: p.x ?? 0,
-          y: p.y ?? 0,
-          width: p.width ?? 3,
-          height: p.height ?? 2,
-          rotation: p.rotation ?? 0,
-          opacity: p.opacity ?? 0.8,
-          shape: p.shape ?? "rectangle",
-          type: p.type ?? "bed",
-          plantedCultureId: p.plantedCultureId ?? null
-        }));
+        const normalizedPlots = (activeGarden.plots || []).map(p => {
+          const culture = CULTURES.find(c => c.id === String(p.plantedCultureId));
+
+          return {
+            ...p,
+            id: p._id ? p._id.toString() : crypto.randomUUID(),
+
+            x: p.x ?? 0,
+            y: p.y ?? 0,
+
+            width: p.width ?? 3,
+            height: p.height ?? 2,
+
+            rotation: p.rotation ?? 0,
+            opacity: p.opacity ?? 0.8,
+
+            shape: p.shape ?? "rect",
+            type: p.type ?? "culture",
+
+            plantedCultureId: p.plantedCultureId ?? null,
+
+            // réassociation culture complète
+            cultureData: culture || null
+          };
+        });
         console.log("Plots normalisés :", normalizedPlots);
         setPlots(normalizedPlots);
         setIsHydrated(true);
@@ -151,16 +167,45 @@ const App: React.FC = () => {
   }, [plots]);
 
   useEffect(() => {
-    if (!activeGardenId) return;
-    if (!isHydrated) return;
+    plotsRef.current = plots;
+  }, [plots]);
+
+  useEffect(() => {
+    if (!activeGardenId) return
+    if (!isHydrated) return
+    if (isDragging) return
 
     const timeout = setTimeout(() => {
-      updateGarden(activeGardenId, { plots })
-        .catch(err => console.error("Erreur sauvegarde Mongo :", err));
-    }, 500);
+
+      const plotsForMongo = plotsRef.current.map(p => {
+        const { id, ...rest } = p
+        return {
+          ...rest,
+          _id: id
+        }
+      })
+
+      if (plotsForMongo.length === 0) {
+        console.warn("⚠️ Sauvegarde bloquée : aucun plot")
+        return
+      }
+
+      const plotsString = JSON.stringify(plotsForMongo)
+
+      if (plotsString === lastSavedPlotsRef.current) {
+        return
+      }
+
+      lastSavedPlotsRef.current = plotsString
+
+      updateGarden(activeGardenId, { plots: plotsForMongo })
+        .catch(err => console.error("Erreur sauvegarde Mongo :", err))
+
+    }, 500)
 
     return () => clearTimeout(timeout);
-  }, [plots, activeGardenId, isHydrated]);
+
+  }, [plots, activeGardenId, isHydrated, isDragging]);
 
   // Logique pour déterminer les plots à afficher (Jardin ou Intérieur Serre)
   const displayedPlots = useMemo(() => {
@@ -255,7 +300,7 @@ const App: React.FC = () => {
 
   const handleAddPlot = (customPlot?: Plot) => {
     const newPlot: Plot = customPlot || {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       name: `Nouvel Élément`,
       type: 'culture',
       shape: 'rect',
@@ -276,7 +321,7 @@ const App: React.FC = () => {
     const culture = CULTURES.find(c => c.id === cultureId);
 
     const newPlot: Plot = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       name: culture ? culture.name : 'Nouvelle Culture',
       type: 'culture',
       shape: 'rect',
@@ -306,7 +351,7 @@ const App: React.FC = () => {
     if (!culture) return;
 
     const newPlot: Plot = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       name: `${culture.name}`,
       type: 'culture',
       shape: 'rect',
@@ -354,7 +399,7 @@ const App: React.FC = () => {
 
         if (!collision) {
           newPlots.push({
-            id: Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID(),
             name: culture?.name || 'Auto',
             type: 'culture',
             shape: 'rect',
@@ -553,6 +598,7 @@ const App: React.FC = () => {
                           onCloseCalibration={() => setIsCalibrating(false)}
                           onEnterGreenhouse={(id) => { setCurrentGreenhouseId(id); setSelectedPlot(null); }}
                           isInsideGreenhouse={!!currentGreenhouseId}
+                          setIsDragging={setIsDragging}
                         />
 
                         {!currentGreenhouseId && (

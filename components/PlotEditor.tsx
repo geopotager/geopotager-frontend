@@ -99,7 +99,7 @@ const PlotEditor: React.FC<PlotEditorProps> = ({ plot, config, onUpdate, onDelet
     );
 
     const newPlot: Plot = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       name: matchedCulture ? matchedCulture.name : suggestionName,
       type: 'culture',
       shape: 'rect',
