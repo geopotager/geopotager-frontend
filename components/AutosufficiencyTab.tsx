@@ -30,6 +30,16 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
    };
 
    const totalWaterWeekly = CULTURES.reduce((acc, c) => acc + getWeeklyWaterConsumption(c.id), 0);
+   const totalCultivatedSurface = plots.reduce(
+      (sum, p) => sum + p.width * p.height,
+      0
+   );
+   const terrainSurface = config.terrainWidth * config.terrainHeight;
+   const occupationRate =
+      terrainSurface > 0
+         ? (totalCultivatedSurface / terrainSurface) * 100
+         : 0;
+   const remainingSurface = terrainSurface - totalCultivatedSurface;
    const totalChickens = plots.reduce((acc, p) => p.type === 'coop' ? acc + (p.chickenCount || 0) : acc, 0);
    const eggProductionPerYear = totalChickens * 250;
    const eggNeedsPerYear = config.peopleCount * 200;
@@ -81,6 +91,25 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                      showSunPath={true} // Exposition soleil affichée
                   />
                </div>
+               <div className="mt-4 bg-white border-2 border-black p-3 text-xs font-mono space-y-1">
+                  {plots.map(p => (
+                     <div key={p.id} className="flex justify-between border-b border-gray-200 pb-1">
+                        <span className="font-bold">{p.name}</span>
+                        <span>
+                           {p.width.toFixed(1)} × {p.height.toFixed(1)} m
+                           {" "}({(p.width * p.height).toFixed(2)} m²)
+                        </span>
+                     </div>
+                  ))}
+               </div>
+               <div className="text-right font-black mt-2 text-xs">
+                  Surface cultivée : {totalCultivatedSurface.toFixed(2)} m² / {terrainSurface} m²
+                  ({occupationRate.toFixed(1)} %)
+               </div>
+
+               <div className="text-right font-black text-xs text-emerald-700">
+                  Surface disponible : {remainingSurface.toFixed(2)} m²
+               </div>
             </div>
          </div>
 
@@ -109,6 +138,13 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                {visibleCultures.map(culture => {
                   const { neededPlants: needed } = calculateNeeds(culture.id, config.peopleCount, config.sufficiencyTarget);
                   const real = countExistingPlants(plots, culture.id);
+                  const usedSurface = plots
+                     .filter(p => p.plantedCultureId === culture.id)
+                     .reduce((sum, p) => sum + p.width * p.height, 0);
+                  const neededSurface = real > 0
+                     ? (usedSurface / real) * needed
+                     : 0;
+                  const missingSurface = Math.max(0, neededSurface - usedSurface);
                   const percent = needed > 0 ? Math.min(100, Math.round((real / needed) * 100)) : 100;
                   const water = getWeeklyWaterConsumption(culture.id);
 
@@ -127,8 +163,19 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                                     <span className={`text-[10px] px-2 py-0.5 font-black border border-black ${percent >= 100 ? 'bg-emerald-400 text-black' : 'bg-red-200 text-red-900'}`}>
                                        {real} / {needed} plants
                                     </span>
-                                 </div>
-                              </div>
+
+                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-blue-200 text-blue-900">
+                                       {usedSurface.toFixed(2)} m² cultivés
+                                    </span>
+
+                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-purple-200 text-purple-900">
+                                       {neededSurface.toFixed(2)} m² nécessaires
+                                    </span>
+
+                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-yellow-200 text-yellow-900">
+                                       {missingSurface.toFixed(2)} m² à cultiver
+                                    </span>
+                                 </div>                              </div>
                            </div>
                            <div className="text-right hidden sm:block">
                               <div className="text-[10px] font-bold text-[#5D4037] uppercase mb-1">Arrosage</div>
