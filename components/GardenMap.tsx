@@ -464,6 +464,10 @@ const GardenMap: React.FC<GardenMapProps> = ({
                 const capacity = calculatePlantCapacity(plot, cult);
                 const shadow = calculateShadow(plot.height, plot.type);
                 const plotColor = getPlotColor(plot);
+                const isManipulating =
+                  dragOperation.current &&
+                  dragOperation.current.targetId === plot.id;
+
                 return (
                   <div key={plot.id} onMouseDown={(e) => handlePlotMouseDown(e, plot, 'move')} className={`absolute transition-shadow ${isSelected ? 'cursor-spade border-4 border-[#3E2723] z-40' : 'cursor-garden-tool border-2 border-[#5D4037] z-20'} ${isSelected ? 'shadow-[-4px_-4px_0px_0px_#5D4037]' : `hover:shadow-[-4px_-4px_0px_0px_rgba(62,39,35,0.8)] ${plotColor}`} ${plot.shape === 'circle' ? 'rounded-full' : 'rounded-none'} flex flex-col items-center justify-center select-none group/plot`} style={{ left: plot.x * pixelsPerMeter, top: plot.y * pixelsPerMeter, width: plot.width * pixelsPerMeter, height: plot.height * pixelsPerMeter, opacity: isCalibrating ? 0.3 : (plot.opacity ?? 0.8), transform: `rotate(${plot.rotation || 0}deg)`, backgroundColor: !plotColor.startsWith('bg-') ? plotColor : undefined, ...shadow }}>
                     <div className="relative z-10 flex flex-col items-center pointer-events-none text-center" style={{ transform: `rotate(-${plot.rotation || 0}deg)` }}><span className="text-[8px] font-black text-[#3E2723] uppercase drop-shadow-md bg-white/80 px-1 border border-[#5D4037] shadow-sm">{plot.name}</span>{cult && (<div className="flex flex-col items-center leading-none mt-1 gap-0.5"><span className="text-[7px] font-bold text-white bg-[#3E2723] px-1 border border-[#5D4037]">{capacity} plants</span></div>)}</div>
@@ -476,6 +480,29 @@ const GardenMap: React.FC<GardenMapProps> = ({
                     )}
 
                     {isSelected && !isCalibrating && (<><div onMouseDown={(e) => handlePlotMouseDown(e, plot, 'resize')} className="absolute bottom-[-6px] right-[-6px] w-6 h-6 bg-emerald-500 border-2 border-[#5D4037] cursor-se-resize z-50 rounded-full"></div><div onMouseDown={(e) => handlePlotMouseDown(e, plot, 'rotate')} className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-8 h-8 bg-white border-2 border-[#5D4037] flex items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_#5D4037] z-50 rounded-full"><i className="fa-solid fa-rotate text-xs"></i><div className="absolute bottom-8 left-1/2 w-0.5 h-2 bg-[#5D4037] -translate-x-1/2"></div></div></>)}
+                    {isManipulating && (
+                      <>
+                        {/* largeur */}
+                        <div
+                          className="absolute -top-6 left-1/2 -translate-x-1/2 
+      bg-white border-2 border-black text-[10px] font-black px-2
+      shadow-[2px_2px_0px_black] pointer-events-none"
+                          style={{ transform: `translate(-50%, 0) rotate(-${plot.rotation || 0}deg)` }}
+                        >
+                          {plot.width.toFixed(2)} m
+                        </div>
+
+                        {/* hauteur */}
+                        <div
+                          className="absolute -right-10 top-1/2 -translate-y-1/2
+      bg-white border-2 border-black text-[10px] font-black px-2
+      shadow-[2px_2px_0px_black] pointer-events-none"
+                          style={{ transform: `translate(0, -50%) rotate(-${plot.rotation || 0}deg)` }}
+                        >
+                          {plot.height.toFixed(2)} m
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })}
