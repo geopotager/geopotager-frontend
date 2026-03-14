@@ -14,6 +14,7 @@ import { CULTURES, DEMO_PLOTS } from './constants';
 import { getGardenAnalysis } from './lib/gemini';
 import { generateMissingSuggestions, countExistingPlants, calculateNeeds } from './lib/plantCalculations';
 import Register from "./Register";
+import VivrierPrintLayout from "./components/VivrierPrintLayout";
 
 const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(true);
@@ -457,30 +458,11 @@ const App: React.FC = () => {
 
   if (isPrintPreview) {
     return (
-      <div className="min-h-screen bg-white p-8 overflow-auto">
-        <div className="max-w-4xl mx-auto space-y-8 print:w-full print:max-w-none">
-          <div className="flex justify-between items-start border-b-2 border-black pb-4 print:hidden">
-            <h1 className="text-2xl font-black font-mono">Aperçu Impression</h1>
-            <div className="flex gap-4">
-              <button onClick={() => window.print()} className="bg-emerald-500 border-2 border-black text-black px-6 py-2 font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Lancer Impression</button>
-              <button onClick={() => setIsPrintPreview(false)} className="bg-white border-2 border-black text-black px-6 py-2 font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">Retour</button>
-            </div>
-          </div>
-          <GardenMap
-            plots={plots}
-            onSelectPlot={() => { }}
-            onUpdatePlot={() => { }}
-            onAddPlot={() => { }}
-            onConfigChange={() => { }}
-            selectedPlotId={null}
-            multiSelectedIds={[]}
-            onMultiSelect={() => { }}
-            config={config}
-            isCalibrating={false}
-            showSunPath={false}
-          />
-        </div>
-      </div>
+      <VivrierPrintLayout
+        config={config}
+        plots={plots}
+        onClose={() => setIsPrintPreview(false)}
+      />
     );
   }
 
@@ -754,7 +736,7 @@ const App: React.FC = () => {
 
               {currentTab === 'sufficiency' && (
                 <div className="h-full w-full overflow-hidden bg-white">
-                  <AutosufficiencyTab config={config} onConfigChange={setConfig} plots={plots} onRequestPlanning={handleRequestPlanningFromVivier} onOpenCultureDetails={handleOpenCultureDetails} />
+                  <AutosufficiencyTab config={config} onConfigChange={setConfig} plots={plots} onRequestPlanning={() => setIsPrintPreview(true)} onOpenCultureDetails={handleOpenCultureDetails} />
                 </div>
               )}
             </main>

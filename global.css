@@ -1,0 +1,12 @@
+@media print {
+
+  .vivrier-page {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .vivrier-page:last-child {
+    break-after: auto;
+  }
+
+}

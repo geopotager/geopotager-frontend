@@ -55,13 +55,13 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
    });
 
    return (
-      <div className="h-full bg-[#EFEBE9] overflow-y-auto p-4 md:p-8 space-y-8">
+      <div className="h-full bg-[#EFEBE9] overflow-y-auto print:overflow-visible p-4 md:p-8 space-y-8">
 
          {/* HEADER AVEC BOUTON PRINT */}
          <div className="flex justify-between items-center mb-6 no-print">
             <h1 className="text-2xl font-black text-[#3E2723] uppercase">Dossier Vivrier</h1>
             <button
-               onClick={() => window.print()}
+               onClick={onRequestPlanning}
                className="bg-[#3E2723] text-white px-6 py-3 font-black uppercase text-xs flex items-center gap-2 border-2 border-[#5D4037] shadow-[4px_4px_0px_0px_#8D6E63] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
                <i className="fa-solid fa-print"></i>

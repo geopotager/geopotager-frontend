@@ -1,8 +1,10 @@
+import { buildVivrierReport } from "../lib/vivrierReport";
 import React from "react";
 import { GardenConfig, Plot } from "../types";
 import AutosufficiencyTab from "./AutosufficiencyTab";
 import GardenMap from "./GardenMap";
 import VivrierFoodProduction from "./VivrierFoodProduction";
+import VivrierSummary from "./VivrierSummary";
 
 interface Props {
   config: GardenConfig;
@@ -11,6 +13,9 @@ interface Props {
 }
 
 const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
+
+  const report = buildVivrierReport(plots, config);
+
   const today = new Date();
 
   return (
@@ -37,7 +42,7 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto space-y-16 p-8 print:p-0 print:max-w-none">
+      <div className="max-w-5xl mx-auto p-8 print:p-0 print:max-w-none">
 
         {/* PAGE 1 — COUVERTURE */}
         <section className="vivrier-page bg-[#5D4037] text-white p-12 border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
@@ -48,6 +53,10 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
               GÉOPOTAGER
             </h1>
 
+            <p className="text-sm tracking-[0.3em] opacity-80">
+              INTELLIGENCE VIVRIÈRE
+            </p>
+
             <p className="text-xl font-mono tracking-[0.4em] bg-black px-6 py-2 inline-block">
               DOSSIER VIVRIER
             </p>
@@ -55,23 +64,37 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
             <div className="pt-12 space-y-4 text-lg">
 
               <p>
-                Objectif autosuffisance :
-                <span className="font-black ml-2">
-                  {config.sufficiencyTarget} %
-                </span>
-              </p>
-
-              <p>
                 Foyer :
                 <span className="font-black ml-2">
-                  {config.peopleCount} personnes
+                  {report.general.people} personnes
                 </span>
               </p>
 
               <p>
-                Terrain :
+                Objectif autosuffisance :
                 <span className="font-black ml-2">
-                  {config.terrainWidth} m × {config.terrainHeight} m
+                  {report.general.targetAutosufficiency} %
+                </span>
+              </p>
+
+              <p>
+                Surface terrain :
+                <span className="font-black ml-2">
+                  {report.general.surfaceTerrain.toFixed(0)} m²
+                </span>
+              </p>
+
+              <p>
+                Surface cultivée :
+                <span className="font-black ml-2">
+                  {report.general.surfaceCultivee.toFixed(0)} m²
+                </span>
+              </p>
+
+              <p>
+                Parcelles cultivées :
+                <span className="font-black ml-2">
+                  {report.general.plotCount}
                 </span>
               </p>
 
@@ -95,13 +118,13 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
 
             <GardenMap
               plots={plots}
-              onSelectPlot={() => {}}
-              onUpdatePlot={() => {}}
-              onAddPlot={() => {}}
-              onConfigChange={() => {}}
+              onSelectPlot={() => { }}
+              onUpdatePlot={() => { }}
+              onAddPlot={() => { }}
+              onConfigChange={() => { }}
               selectedPlotId={null}
               multiSelectedIds={[]}
-              onMultiSelect={() => {}}
+              onMultiSelect={() => { }}
               config={config}
               isCalibrating={false}
               showSunPath={false}
@@ -110,18 +133,60 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
           </div>
         </section>
 
-        {/* PAGE 3 — PRODUCTION ALIMENTAIRE */}
-        <VivrierFoodProduction plots={plots} config={config} />
+        {/* PAGE 3 — SYNTHÈSE VIVRIÈRE */}
+        <section className="vivrier-page bg-white p-10 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
 
-        {/* PAGE 4+ — ANALYSE VIVRIÈRE */}
+          <h2 className="text-3xl font-black mb-8 uppercase">
+            Diagnostic vivrier
+          </h2>
+
+          <div className="grid grid-cols-3 gap-8 text-center">
+
+            <div className="border-2 border-black p-6">
+              <p className="text-sm opacity-60">Production estimée</p>
+              <p className="text-4xl font-black">
+                {Math.round(report.diagnostic.totalProduction)} kg
+              </p>
+            </div>
+
+            <div className="border-2 border-black p-6">
+              <p className="text-sm opacity-60">Besoins alimentaires</p>
+              <p className="text-4xl font-black">
+                {Math.round(report.diagnostic.totalNeeds)} kg
+              </p>
+            </div>
+
+            <div className="border-2 border-black p-6">
+              <p className="text-sm opacity-60">Autosuffisance</p>
+              <p className="text-4xl font-black">
+                {report.diagnostic.autosufficiency} %
+              </p>
+            </div>
+
+          </div>
+
+          <div className="mt-10 text-lg leading-relaxed">
+
+            <p>
+              Le potager couvre actuellement environ
+              <span className="font-black">
+                {" "} {report.diagnostic.autosufficiency}% {" "}
+              </span>
+              des besoins alimentaires du foyer.
+            </p>
+
+            <p className="mt-4 opacity-70">
+              Production estimée : {Math.round(report.diagnostic.totalProduction)} kg
+              pour un besoin annuel de {Math.round(report.diagnostic.totalNeeds)} kg.
+            </p>
+
+          </div>
+
+        </section>
+
+        {/* PAGE 4 — PRODUCTION ALIMENTAIRE */}
         <section className="vivrier-page">
-
-          <AutosufficiencyTab
-            config={config}
-            plots={plots}
-            onConfigChange={() => {}}
-          />
-
+          <VivrierFoodProduction plots={plots} config={config} />
         </section>
 
       </div>
