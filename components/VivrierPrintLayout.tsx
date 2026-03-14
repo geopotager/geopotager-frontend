@@ -111,7 +111,7 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
         </section>
 
         {/* PAGE 3 — PRODUCTION ALIMENTAIRE */}
-        <VivrierFoodProduction plots={plots} />
+        <VivrierFoodProduction plots={plots} config={config} />
 
         {/* PAGE 4+ — ANALYSE VIVRIÈRE */}
         <section className="vivrier-page">

@@ -149,7 +149,7 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                   const water = getWeeklyWaterConsumption(culture.id);
 
                   return (
-                     <div key={culture.id} className="bg-white border-4 border-[#3E2723] p-0 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] break-inside-avoid relative overflow-hidden">
+                     <div key={culture.id} className="bg-white border-4 border-[#3E2723] p-0 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] break-inside-avoid print:break-inside-avoid relative overflow-hidden">
                         {/* Header Culture */}
                         <div className="bg-[#D7CCC8] p-4 flex justify-between items-start border-b-2 border-[#3E2723]">
                            <div className="flex items-center gap-4">
@@ -157,25 +157,46 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                                  <img src={culture.image} className="w-full h-full object-contain" />
                               </div>
                               <div>
-                                 <h3 className="text-2xl font-black text-[#3E2723] uppercase leading-none">{culture.name}</h3>
-                                 <span className="text-xs font-bold uppercase text-[#5D4037] block mt-1">{culture.category}</span>
-                                 <div className="flex gap-2 mt-2">
-                                    <span className={`text-[10px] px-2 py-0.5 font-black border border-black ${percent >= 100 ? 'bg-emerald-400 text-black' : 'bg-red-200 text-red-900'}`}>
-                                       {real} / {needed} plants
-                                    </span>
+                                 <h3 className="text-2xl font-black text-[#3E2723] uppercase leading-none">
+                                    {culture.name}
+                                 </h3>
 
-                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-blue-200 text-blue-900">
-                                       {usedSurface.toFixed(2)} m² cultivés
-                                    </span>
+                                 <span className="text-xs font-bold uppercase text-[#5D4037] block mt-1">
+                                    {culture.category}
+                                 </span>
 
-                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-purple-200 text-purple-900">
-                                       {neededSurface.toFixed(2)} m² nécessaires
-                                    </span>
+                                 <div className="mt-3 w-full">
 
-                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-yellow-200 text-yellow-900">
-                                       {missingSurface.toFixed(2)} m² à cultiver
-                                    </span>
-                                 </div>                              </div>
+                                    <div className="grid grid-cols-4 gap-1 text-[10px] font-black uppercase text-[#5D4037] mb-1 border-b border-[#5D4037] pb-1">
+                                       <div>Plants</div>
+                                       <div>Surface cultivée</div>
+                                       <div>Surface nécessaire</div>
+                                       <div>Manque</div>
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-2 text-[10px] font-black">
+
+                                       <div className={`px-2 py-1 border border-black flex items-center justify-center font-mono ${percent >= 100 ? 'bg-emerald-400 text-black' : 'bg-red-200 text-red-900'}`}>
+                                          {real} / {needed}
+                                       </div>
+
+                                       <div className="px-2 py-1 border border-black text-center font-mono bg-blue-200 text-blue-900">
+                                          {usedSurface.toFixed(2)} m²
+                                       </div>
+
+                                       <div className="px-2 py-1 border border-black text-center font-mono bg-purple-200 text-purple-900">
+                                          {neededSurface.toFixed(2)} m²
+                                       </div>
+
+                                       <div className="px-2 py-1 border border-black text-center font-mono bg-yellow-200 text-yellow-900">
+                                          {missingSurface.toFixed(2)} m²
+                                       </div>
+
+                                    </div>
+
+                                 </div>
+
+                              </div>
                            </div>
                            <div className="text-right hidden sm:block">
                               <div className="text-[10px] font-bold text-[#5D4037] uppercase mb-1">Arrosage</div>
