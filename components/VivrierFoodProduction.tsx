@@ -101,15 +101,15 @@ const VivrierFoodProduction: React.FC<Props> = ({ plots, config }) => {
               </td>
 
               <td className="p-3 border-r border-black text-center text-orange-600 font-black">
-                {Math.round(row.production)} {row.unit}
+                {Math.round(row.production)} kg
               </td>
 
               <td className="p-3 border-r border-black text-center font-mono">
-                {Math.round(row.productionNeeded)} {row.unit}
+                {Math.round(row.productionNeeded)} kg
               </td>
 
               <td className="p-3 text-center text-red-600 font-black">
-                {Math.round(row.productionMissing)} {row.unit}
+                {Math.round(row.productionMissing)} kg
               </td>
 
             </tr>

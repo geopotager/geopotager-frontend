@@ -2,6 +2,7 @@ import React from "react";
 import { Plot } from "../types";
 import { CULTURES } from "../constants";
 import { calculateNeeds, countExistingPlants } from "../lib/plantCalculations";
+import { convertYieldToKg } from "../lib/yieldToKg";
 
 interface Props {
   plots: Plot[];
@@ -12,8 +13,17 @@ const VivrierSummary: React.FC<Props> = ({ plots, config }) => {
 
   let totalProduction = 0;
   let totalNeeded = 0;
+  let totalSurfaceNeeded = 0;
 
-  // calcul production actuelle et objectif
+  const cultivatedSurface = plots.reduce(
+    (sum, p) => sum + (p.width * p.height),
+    0
+  );
+
+  const terrainSurface =
+    (config.terrainWidth || 0) *
+    (config.terrainHeight || 0);
+
   CULTURES.forEach(culture => {
 
     const plants = countExistingPlants(plots, culture.id);
@@ -24,49 +34,67 @@ const VivrierSummary: React.FC<Props> = ({ plots, config }) => {
       config.sufficiencyTarget
     );
 
-    if (culture.yield?.unit?.includes("kg")) {
+    if (!culture.yield) return;
 
-      totalProduction += plants * culture.yield.amount;
-      totalNeeded += neededPlants * culture.yield.amount;
+    const yieldAmount = culture.yield.amount || 0;
+    const yieldUnit = culture.yield.unit || "";
+
+    const yieldKg = convertYieldToKg(
+      yieldAmount,
+      yieldUnit,
+      culture.averageWeightKg
+    );
+
+    const surfacePerPlant =
+      (culture.spacingCm?.betweenPlants || 0) / 100 *
+      (culture.spacingCm?.betweenRows || 0) / 100;
+
+    const usedSurface = plants * surfacePerPlant;
+    const neededSurface = neededPlants * surfacePerPlant;
+
+    /* -------------------------
+       PRODUCTION ACTUELLE
+    ------------------------- */
+
+    if (yieldUnit.includes("plant")) {
+
+      totalProduction += plants * yieldKg;
+
+    } else if (yieldUnit.includes("m²")) {
+
+      totalProduction += usedSurface * yieldKg;
 
     }
 
+    /* -------------------------
+       OBJECTIF ALIMENTAIRE
+    ------------------------- */
+
+    if (yieldUnit.includes("plant")) {
+
+      totalNeeded += neededPlants * yieldKg;
+
+    } else if (yieldUnit.includes("m²")) {
+
+      totalNeeded += neededSurface * yieldKg;
+
+    }
+
+    /* -------------------------
+       SURFACE NECESSAIRE
+    ------------------------- */
+
+    totalSurfaceNeeded += neededSurface;
+
   });
 
-  const missing = Math.max(0, totalNeeded - totalProduction);
-
-  // surface cultivée actuelle
-  const cultivatedSurface = plots.reduce(
-    (sum, p) => sum + p.width * p.height,
-    0
-  );
-
-  const terrainSurface =
-    config.terrainWidth * config.terrainHeight;
+  const missing =
+    Math.max(0, totalNeeded - totalProduction);
 
   const coverage =
     totalNeeded > 0
       ? Math.round((totalProduction / totalNeeded) * 100)
       : 0;
-
-  // calcul surface nécessaire pour autosuffisance
-  let totalSurfaceNeeded = 0;
-
-  CULTURES.forEach(culture => {
-
-    const { neededPlants } = calculateNeeds(
-      culture.id,
-      config.peopleCount,
-      config.sufficiencyTarget
-    );
-
-    const surfacePerPlant =
-      (culture.spacingCm.betweenPlants / 100) *
-      (culture.spacingCm.betweenRows / 100);
-
-    totalSurfaceNeeded += neededPlants * surfacePerPlant;
-
-  });
 
   const missingSurface =
     Math.max(0, totalSurfaceNeeded - cultivatedSurface);
@@ -154,6 +182,7 @@ const VivrierSummary: React.FC<Props> = ({ plots, config }) => {
       </div>
 
     </section>
+
   );
 };
 

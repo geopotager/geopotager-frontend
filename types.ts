@@ -48,16 +48,22 @@ export interface Culture {
   waterNeeds: 'Faible' | 'Moyen' | 'Élevé';
   watering: WateringInfo;
   yield: YieldInfo;
+
+  // poids moyen d'une unité comestible (fruit, botte, tête...)
+  averageWeightKg?: number;
+
   maintenanceTips: string;
   growingMethods: string; 
   soilCoverage: string; 
   associations: string[]; 
   diseases: Disease[];
   plantsPerPerson: number;
+
   spacingCm: {
     betweenPlants: number;
     betweenRows: number;
   };
+
   planning: Planning;
   rotations: CultureCategory[];
   successions: number; // Nombre de fois que la culture peut être faite sur une saison (ex: radis = 4, tomates = 1)

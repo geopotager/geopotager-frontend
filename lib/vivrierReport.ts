@@ -1,5 +1,7 @@
 import { Plot, GardenConfig } from "../types";
 import { CULTURES } from "../constants";
+import { convertYieldToKg } from "./yieldToKg";
+import { countExistingPlants } from "../lib/plantCalculations";
 
 export interface CultureReport {
   id: string;
@@ -59,30 +61,36 @@ export function buildVivrierReport(
       0
     );
 
-    let plants = 0;
+    // ✔ Utilise le moteur officiel
+    const plants = countExistingPlants(plots, culture.id);
 
-    plotsOfCulture.forEach(p => {
+    /* -------------------------
+       PRODUCTION
+    ------------------------- */
 
-      const plantSpacing =
-        (culture.spacingCm.betweenPlants / 100) *
-        (culture.spacingCm.betweenRows / 100);
+    if (!culture.yield || !culture.yield.unit) return null;
 
-      const plantsInPlot =
-        Math.floor((p.width * p.height) / plantSpacing);
-
-      plants += plantsInPlot;
-
-    });
+    const yieldKg = convertYieldToKg(
+      culture.yield.amount,
+      culture.yield.unit,
+      culture.averageWeightKg
+    );
 
     let production = 0;
 
-    if (culture.yield.unit.includes("kg/plant")) {
-      production = plants * culture.yield.amount;
+    if (culture.yield.unit.includes("plant")) {
+      production = plants * yieldKg;
     }
 
-    if (culture.yield.unit.includes("kg/m²")) {
-      production = surface * culture.yield.amount;
+    if (culture.yield.unit.includes("m²")) {
+      production = surface * yieldKg;
     }
+
+    /* -------------------------
+       BESOINS
+    ------------------------- */
+
+    const successions = culture.successions || 1;
 
     const neededPlants =
       culture.plantsPerPerson *
@@ -91,8 +99,20 @@ export function buildVivrierReport(
 
     let needs = 0;
 
-    if (culture.yield.unit.includes("kg/plant")) {
-      needs = neededPlants * culture.yield.amount;
+    if (culture.yield.unit.includes("plant")) {
+      needs = neededPlants * yieldKg;
+    }
+
+    if (culture.yield.unit.includes("m²")) {
+
+      const plantSpacing =
+        ((culture.spacingCm?.betweenPlants || 0) / 100) *
+        ((culture.spacingCm?.betweenRows || 0) / 100);
+
+      const neededSurface =
+        (neededPlants / successions) * plantSpacing;
+
+      needs = neededSurface * yieldKg;
     }
 
     const missing = Math.max(0, needs - production);
@@ -108,7 +128,7 @@ export function buildVivrierReport(
       planning: culture.planning
     };
 
-  }).filter(c => c.surface > 0);
+  }).filter((c): c is CultureReport => c !== null && c.surface > 0);
 
   const totalProduction =
     culturesReport.reduce(
