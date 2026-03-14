@@ -489,7 +489,7 @@ const GardenMap: React.FC<GardenMapProps> = ({
       shadow-[2px_2px_0px_black] pointer-events-none"
                           style={{ transform: `translate(-50%, 0) rotate(-${plot.rotation || 0}deg)` }}
                         >
-                          {plot.width.toFixed(2)} m
+                          {plot.width.toFixed(1)} m
                         </div>
 
                         {/* hauteur */}
@@ -499,7 +499,7 @@ const GardenMap: React.FC<GardenMapProps> = ({
       shadow-[2px_2px_0px_black] pointer-events-none"
                           style={{ transform: `translate(0, -50%) rotate(-${plot.rotation || 0}deg)` }}
                         >
-                          {plot.height.toFixed(2)} m
+                          {plot.height.toFixed(1)} m
                         </div>
                       </>
                     )}
