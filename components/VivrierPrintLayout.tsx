@@ -114,7 +114,7 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
             Plan du jardin
           </h2>
 
-          <div className="border-2 border-black p-4">
+          <div className="border-2 border-black p-4 h-[520px]">
 
             <GardenMap
               plots={plots}
@@ -128,6 +128,8 @@ const VivrierPrintLayout: React.FC<Props> = ({ config, plots, onClose }) => {
               config={config}
               isCalibrating={false}
               showSunPath={false}
+              setIsDragging={() => { }}
+              printMode={true}
             />
 
           </div>

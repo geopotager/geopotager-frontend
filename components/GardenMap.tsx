@@ -21,6 +21,7 @@ interface GardenMapProps {
   onEnterGreenhouse?: (plotId: string) => void;
   isInsideGreenhouse?: boolean;
   setIsDragging: (value: boolean) => void
+  printMode?: boolean;
 }
 
 type ToolType = 'pan' | 'select';
@@ -28,12 +29,21 @@ type ToolType = 'pan' | 'select';
 const GardenMap: React.FC<GardenMapProps> = ({
   plots, onSelectPlot, onUpdatePlot, onAddPlot, onConfigChange,
   selectedPlotId, multiSelectedIds, onMultiSelect, config, onPrint, onMissClick, isCalibrating, showSunPath, onCloseCalibration, onEnterGreenhouse, isInsideGreenhouse,
-  setIsDragging
+  setIsDragging, printMode
 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, scale: 1 });
+  useEffect(() => {
+    if (printMode) {
+      setViewTransform({
+        x: 40,
+        y: 40,
+        scale: 1
+      })
+    }
+  }, [printMode])
   const [wrapperSize, setWrapperSize] = useState({ width: 0, height: 0 });
   const [activeTool, setActiveTool] = useState<ToolType>('pan');
   const [selectionBox, setSelectionBox] = useState<{ startX: number, startY: number, endX: number, endY: number } | null>(null);
@@ -128,6 +138,7 @@ const GardenMap: React.FC<GardenMapProps> = ({
 
   // Centrage automatique (Initialisation)
   useEffect(() => {
+    if (printMode) return;
     if (wrapperSize.width === 0 || wrapperSize.height === 0) return;
 
     const padding = 100; // Marge confortable pour l'affichage initial
@@ -361,7 +372,7 @@ const GardenMap: React.FC<GardenMapProps> = ({
 
   return (
     <div className="flex flex-col h-full relative group/map">
-      {!isCalibrating && (
+      {!isCalibrating && !printMode && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-white border-2 border-[#5D4037] px-2 py-2 flex gap-4 animate-in fade-in slide-in-from-top-2 shadow-[4px_4px_0px_0px_#5D4037]">
           <button onClick={() => setActiveTool('pan')} className={`w-10 h-10 border-2 border-[#5D4037] flex items-center justify-center transition-all ${activeTool === 'pan' ? 'bg-[#5D4037] text-white translate-x-[2px] translate-y-[2px]' : 'bg-white text-[#5D4037] hover:bg-[#D7CCC8]'}`} title="Déplacer le plan (Main)"><i className="fa-solid fa-arrows-up-down-left-right"></i></button>
           <button onClick={() => setActiveTool('select')} className={`w-10 h-10 border-2 border-[#5D4037] flex items-center justify-center transition-all ${activeTool === 'select' ? 'bg-emerald-500 text-white translate-x-[2px] translate-y-[2px]' : 'bg-white text-[#5D4037] hover:bg-emerald-100'}`} title="Sélectionner par zone (Carré)"><i className="fa-regular fa-square-check"></i></button>
@@ -408,16 +419,16 @@ const GardenMap: React.FC<GardenMapProps> = ({
 
       <div
         ref={wrapperRef}
-        onWheel={handleWheel}
-        className={`flex-1 relative bg-[#A1887F] border-4 border-[#5D4037] shadow-inner overflow-hidden print:border-0 ${activeTool === 'pan' ? (isCalibrating ? 'cursor-move' : 'cursor-pan-technical') : 'cursor-crosshair'}`}
-        onMouseDown={handleContainerMouseDown}
+        onWheel={printMode ? undefined : handleWheel}
+        className={`flex-1 relative bg-[#A1887F] border-4 border-[#5D4037] shadow-inner overflow-hidden print:border-0`}
+        onMouseDown={printMode ? undefined : handleContainerMouseDown}
       >
         <div style={{ transformOrigin: '0 0', transform: `translate(${viewTransform.x}px, ${viewTransform.y}px) scale(${viewTransform.scale})`, transition: 'transform 0.05s linear' }}>
 
           {/* Suppression des marges forcées ici pour corriger le zoom */}
           <div className="absolute top-0 left-0">
             {/* RESIZE HANDLES (Fluid Fix) */}
-            {!isInsideGreenhouse && !isCalibrating && (
+            {!isInsideGreenhouse && !isCalibrating && !printMode && (
               <>
                 <div onMouseDown={(e) => handleTerrainResizeStart(e, 'right')} className="absolute top-0 right-[-30px] w-10 h-full cursor-ew-resize flex items-center justify-center group z-50" style={{ height: gridHeight, left: gridWidth }}>
                   <div className="w-4 h-16 bg-white border-2 border-black rounded shadow-md hover:bg-yellow-300 transition-colors flex items-center justify-center"><i className="fa-solid fa-grip-lines-vertical text-[10px] text-black"></i></div>
@@ -479,7 +490,7 @@ const GardenMap: React.FC<GardenMapProps> = ({
                       </button>
                     )}
 
-                    {isSelected && !isCalibrating && (<><div onMouseDown={(e) => handlePlotMouseDown(e, plot, 'resize')} className="absolute bottom-[-6px] right-[-6px] w-6 h-6 bg-emerald-500 border-2 border-[#5D4037] cursor-se-resize z-50 rounded-full"></div><div onMouseDown={(e) => handlePlotMouseDown(e, plot, 'rotate')} className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-8 h-8 bg-white border-2 border-[#5D4037] flex items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_#5D4037] z-50 rounded-full"><i className="fa-solid fa-rotate text-xs"></i><div className="absolute bottom-8 left-1/2 w-0.5 h-2 bg-[#5D4037] -translate-x-1/2"></div></div></>)}
+                    {isSelected && !isCalibrating && !printMode && (<><div onMouseDown={(e) => handlePlotMouseDown(e, plot, 'resize')} className="absolute bottom-[-6px] right-[-6px] w-6 h-6 bg-emerald-500 border-2 border-[#5D4037] cursor-se-resize z-50 rounded-full"></div><div onMouseDown={(e) => handlePlotMouseDown(e, plot, 'rotate')} className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-8 h-8 bg-white border-2 border-[#5D4037] flex items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_#5D4037] z-50 rounded-full"><i className="fa-solid fa-rotate text-xs"></i><div className="absolute bottom-8 left-1/2 w-0.5 h-2 bg-[#5D4037] -translate-x-1/2"></div></div></>)}
                     {isManipulating && (
                       <>
                         {/* largeur */}
