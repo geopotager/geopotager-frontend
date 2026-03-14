@@ -81,6 +81,17 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                      showSunPath={true} // Exposition soleil affichée
                   />
                </div>
+               <div className="mt-4 bg-white border-2 border-black p-3 text-xs font-mono space-y-1">
+                  {plots.map(p => (
+                     <div key={p.id} className="flex justify-between border-b border-gray-200 pb-1">
+                        <span className="font-bold">{p.name}</span>
+                        <span>
+                           {p.width.toFixed(1)} × {p.height.toFixed(1)} m
+                           {" "}({(p.width * p.height).toFixed(2)} m²)
+                        </span>
+                     </div>
+                  ))}
+               </div>
             </div>
          </div>
 
@@ -109,6 +120,9 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                {visibleCultures.map(culture => {
                   const { neededPlants: needed } = calculateNeeds(culture.id, config.peopleCount, config.sufficiencyTarget);
                   const real = countExistingPlants(plots, culture.id);
+                  const usedSurface = plots
+                     .filter(p => p.plantedCultureId === culture.id)
+                     .reduce((sum, p) => sum + p.width * p.height, 0);
                   const percent = needed > 0 ? Math.min(100, Math.round((real / needed) * 100)) : 100;
                   const water = getWeeklyWaterConsumption(culture.id);
 
@@ -126,6 +140,10 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                                  <div className="flex gap-2 mt-2">
                                     <span className={`text-[10px] px-2 py-0.5 font-black border border-black ${percent >= 100 ? 'bg-emerald-400 text-black' : 'bg-red-200 text-red-900'}`}>
                                        {real} / {needed} plants
+                                    </span>
+
+                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-blue-200 text-blue-900">
+                                       {usedSurface.toFixed(2)} m² cultivés
                                     </span>
                                  </div>
                               </div>
