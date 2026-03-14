@@ -141,6 +141,10 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                   const usedSurface = plots
                      .filter(p => p.plantedCultureId === culture.id)
                      .reduce((sum, p) => sum + p.width * p.height, 0);
+                  const neededSurface = real > 0
+                     ? (usedSurface / real) * needed
+                     : 0;
+                  const missingSurface = Math.max(0, neededSurface - usedSurface);
                   const percent = needed > 0 ? Math.min(100, Math.round((real / needed) * 100)) : 100;
                   const water = getWeeklyWaterConsumption(culture.id);
 
@@ -163,8 +167,15 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                                     <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-blue-200 text-blue-900">
                                        {usedSurface.toFixed(2)} m² cultivés
                                     </span>
-                                 </div>
-                              </div>
+
+                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-purple-200 text-purple-900">
+                                       {neededSurface.toFixed(2)} m² nécessaires
+                                    </span>
+
+                                    <span className="text-[10px] px-2 py-0.5 font-black border border-black bg-yellow-200 text-yellow-900">
+                                       {missingSurface.toFixed(2)} m² à cultiver
+                                    </span>
+                                 </div>                              </div>
                            </div>
                            <div className="text-right hidden sm:block">
                               <div className="text-[10px] font-bold text-[#5D4037] uppercase mb-1">Arrosage</div>
