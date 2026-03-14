@@ -30,6 +30,16 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
    };
 
    const totalWaterWeekly = CULTURES.reduce((acc, c) => acc + getWeeklyWaterConsumption(c.id), 0);
+   const totalCultivatedSurface = plots.reduce(
+      (sum, p) => sum + p.width * p.height,
+      0
+   );
+   const terrainSurface = config.terrainWidth * config.terrainHeight;
+   const occupationRate =
+      terrainSurface > 0
+         ? (totalCultivatedSurface / terrainSurface) * 100
+         : 0;
+   const remainingSurface = terrainSurface - totalCultivatedSurface;
    const totalChickens = plots.reduce((acc, p) => p.type === 'coop' ? acc + (p.chickenCount || 0) : acc, 0);
    const eggProductionPerYear = totalChickens * 250;
    const eggNeedsPerYear = config.peopleCount * 200;
@@ -91,6 +101,14 @@ const AutosufficiencyTab: React.FC<Props> = ({ config, onConfigChange, plots, on
                         </span>
                      </div>
                   ))}
+               </div>
+               <div className="text-right font-black mt-2 text-xs">
+                  Surface cultivée : {totalCultivatedSurface.toFixed(2)} m² / {terrainSurface} m²
+                  ({occupationRate.toFixed(1)} %)
+               </div>
+
+               <div className="text-right font-black text-xs text-emerald-700">
+                  Surface disponible : {remainingSurface.toFixed(2)} m²
                </div>
             </div>
          </div>
