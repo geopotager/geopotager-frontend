@@ -2,6 +2,7 @@ import { Plot, GardenConfig } from "../types";
 import { CULTURES } from "../constants";
 import { convertYieldToKg } from "./yieldToKg";
 import { countExistingPlants } from "../lib/plantCalculations";
+import { calculateNeeds } from "../lib/plantCalculations";
 
 export interface CultureReport {
   id: string;
@@ -92,10 +93,11 @@ export function buildVivrierReport(
 
     const successions = culture.successions || 1;
 
-    const neededPlants =
-      culture.plantsPerPerson *
-      config.peopleCount *
-      (config.sufficiencyTarget / 100);
+    const { neededPlants } = calculateNeeds(
+      culture.id,
+      config.peopleCount,
+      config.sufficiencyTarget
+    );
 
     let needs = 0;
 

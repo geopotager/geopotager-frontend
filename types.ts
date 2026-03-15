@@ -53,9 +53,9 @@ export interface Culture {
   averageWeightKg?: number;
 
   maintenanceTips: string;
-  growingMethods: string; 
-  soilCoverage: string; 
-  associations: string[]; 
+  growingMethods: string;
+  soilCoverage: string;
+  associations: string[];
   diseases: Disease[];
   plantsPerPerson: number;
 
@@ -105,7 +105,9 @@ export interface GardenConfig {
   backgroundX: number;
   backgroundY: number;
   backgroundOpacity: number;
-  backgroundRotation?: number; 
+  backgroundRotation?: number;
+  bedWidth?: number
+  pathWidth?: number
 }
 
 export interface PlotSuggestion {
